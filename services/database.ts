@@ -391,7 +391,7 @@ export const db = {
 
   submitResult: async (result: ExamResult): Promise<void> => {
     const payload: any = {
-        peserta_id: result.studentId,
+        siswa_id: result.studentId,
         exam_id: result.examId,
         score: result.score,
         status: 'finished',
@@ -408,7 +408,7 @@ export const db = {
         .from('results')
         .select('id')
         .eq('exam_id', result.examId)
-        .eq('peserta_id', result.studentId)
+        .eq('siswa_id', result.studentId)
         .maybeSingle();
 
     let error;
@@ -466,12 +466,12 @@ export const db = {
 
     // 4. Map Data
     return results.map((r: any) => {
-        const student = students?.find(s => s.id === r.peserta_id);
+        const student = students?.find(s => s.id === r.siswa_id);
         const subject = subjects?.find(s => s.id === r.exam_id);
         
         return {
             id: r.id,
-            studentId: r.peserta_id,
+            studentId: r.siswa_id,
             studentName: student?.name || 'Unknown',
             examId: r.exam_id,
             examTitle: subject?.name || 'Unknown',
@@ -753,7 +753,7 @@ export const db = {
         .from('results')
         .select('id, status, answers')
         .eq('exam_id', examId)
-        .eq('peserta_id', userId)
+        .eq('siswa_id', userId)
         .maybeSingle();
 
     // If already finished, don't restart
@@ -761,7 +761,7 @@ export const db = {
 
     const payload: any = {
         exam_id: examId,
-        peserta_id: userId,
+        siswa_id: userId,
         status: 'working'
     };
     
@@ -789,7 +789,7 @@ export const db = {
         .from('results')
         .select('id')
         .eq('exam_id', examId)
-        .eq('peserta_id', userId)
+        .eq('siswa_id', userId)
         .maybeSingle();
 
     const payload = {
@@ -805,7 +805,7 @@ export const db = {
         await supabase.from('results').insert({
             ...payload,
             exam_id: examId,
-            peserta_id: userId
+            siswa_id: userId
         });
     }
   },
@@ -815,7 +815,7 @@ export const db = {
         .from('results')
         .select('answers, violation_count, status, score, start_time')
         .eq('exam_id', examId)
-        .eq('peserta_id', userId)
+        .eq('siswa_id', userId)
         .maybeSingle();
     
     if (error || !data) return null;
@@ -899,7 +899,7 @@ export const db = {
     await supabase.from('results').update({ 
         violation_count: violationCount,
         status: 'locked' // Also lock the result status
-    }).eq('exam_id', examId).eq('peserta_id', userId);
+    }).eq('exam_id', examId).eq('siswa_id', userId);
     
     console.log(`Violation reported for user ${userId} on exam ${examId}. Count: ${violationCount}`);
   },
