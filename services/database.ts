@@ -112,10 +112,10 @@ export const db = {
         };
     }
 
-    // Check if Supabase is configured
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        throw new Error("Konfigurasi Supabase belum lengkap. Harap hubungi Admin.");
-    }
+    // Check if Supabase is configured (Now handled by fallback in supabaseClient.ts)
+    // if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    //     throw new Error("Konfigurasi Supabase belum lengkap. Harap hubungi Admin.");
+    // }
 
     // 2. STAFF CHECK (Table: staff)
     const { data: staffData } = await supabase
@@ -140,7 +140,7 @@ export const db = {
     const { data, error } = await supabase
       .from('students')
       .select('*')
-      .eq('nomor_peserta', cleanInput)
+      .eq('nisn', cleanInput)
       .maybeSingle();
 
     if (error || !data) return undefined;
@@ -167,11 +167,11 @@ export const db = {
     return {
         id: data.id,
         name: data.name,
-        username: data.nomor_peserta,
+        username: data.nisn,
         role: UserRole.STUDENT,
         school: data.school,
         class: data.class,
-        nomorPeserta: data.nomor_peserta,
+        nomorPeserta: data.nisn,
         password: data.password,
         status: data.status,
         isLogin: data.is_login,
@@ -505,9 +505,9 @@ export const db = {
     return students.map((u: any) => ({
         id: u.id,
         name: u.name,
-        username: u.nomor_peserta,
+        username: u.nisn,
         role: UserRole.STUDENT,
-        nomorPeserta: u.nomor_peserta,
+        nomorPeserta: u.nisn,
         school: u.school,
         npsn: u.npsn,
         class: u.class,
@@ -613,7 +613,7 @@ export const db = {
   importStudents: async (users: User[]): Promise<void> => {
       const payload = users.map(u => ({
           name: u.name,
-          nomor_peserta: u.nomorPeserta || u.username, 
+          nisn: u.nomorPeserta || u.username, 
           school: u.school || 'UMUM',
           npsn: u.npsn || '',
           class: u.class || '-',
@@ -621,14 +621,14 @@ export const db = {
           is_login: false,
           status: 'idle'
       }));
-      const { error } = await supabase.from('students').upsert(payload, { onConflict: 'nomor_peserta' });
+      const { error } = await supabase.from('students').upsert(payload, { onConflict: 'nisn' });
       if (error) throw error;
   },
 
   createUser: async (user: Partial<User>): Promise<void> => {
       const payload: any = {
           name: user.name,
-          nomor_peserta: user.nomorPeserta || user.username,
+          nisn: user.nomorPeserta || user.username,
           school: user.school || 'UMUM',
           npsn: user.npsn || '',
           class: user.class || '-',
@@ -643,7 +643,7 @@ export const db = {
   updateUser: async (id: string, user: Partial<User>): Promise<void> => {
       const payload: any = {};
       if (user.name) payload.name = user.name;
-      if (user.nomorPeserta || user.username) payload.nomor_peserta = user.nomorPeserta || user.username;
+      if (user.nomorPeserta || user.username) payload.nisn = user.nomorPeserta || user.username;
       if (user.school) payload.school = user.school;
       if (user.npsn) payload.npsn = user.npsn;
       if (user.class) payload.class = user.class;
@@ -656,7 +656,7 @@ export const db = {
   addUser: async (user: User): Promise<void> => {
       const payload: any = {
           name: user.name,
-          nomor_peserta: user.nomorPeserta || user.username,
+          nisn: user.nomorPeserta || user.username,
           school: user.school || 'UMUM',
           npsn: user.npsn || '',
           class: user.class || '-',

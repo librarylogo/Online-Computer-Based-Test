@@ -48,7 +48,7 @@ const App: React.FC = () => {
     showTokenToStudents: false
   });
 
-  const isSupabaseConfigured = !!import.meta.env.VITE_SUPABASE_URL && !!import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const isSupabaseConfigured = true; // Handled by fallback in supabaseClient.ts
 
   useEffect(() => {
     cacheManager.initialize();
