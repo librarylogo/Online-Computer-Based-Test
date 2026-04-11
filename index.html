@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/d/1OtRkYlUrTr89sYj1Wj1hwTO7NjWXoLPf?authuser=0">
+    <link rel="shortcut icon" type="image/png" href="https://lh3.googleusercontent.com/d/1OtRkYlUrTr89sYj1Wj1hwTO7NjWXoLPf?authuser=0">
+    <meta name="theme-color" content="#ffffff">
+    
+    <!-- Automatic Cache Cleaning Meta Tags -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <title>ONLINE BASED TEST</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              display: ['Nunito', 'sans-serif'],
+            },
+            colors: {
+              'primary-blue': '#2459a9',
+              'primary-dark': '#1a407a',
+              'primary-light': '#f3f7fc',
+              'btn-primary': '#0d6efd',
+              'btn-danger': '#dc3545',
+              'btn-warning': '#ffc107',
+            },
+            animation: {
+              'float-slow': 'float 6s ease-in-out infinite',
+              'float-medium': 'float 4s ease-in-out infinite',
+              'float-fast': 'float 3s ease-in-out infinite',
+              'float-reverse': 'float-rev 5s ease-in-out infinite',
+            },
+            screens: {
+              'print': {'raw': 'print'},
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f3f7fc;
+      }
+      .exam-radio:checked + div {
+        border-color: #0d6efd;
+        background-color: #e7f1ff;
+      }
+      .exam-radio:checked + div .radio-dot {
+        border-color: #0d6efd;
+        background-color: #0d6efd;
+        box-shadow: inset 0 0 0 3px white;
+      }
+
+      /* Shape Animations */
+      @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-20px); }
+        100% { transform: translateY(0px); }
+      }
+      @keyframes float-rev {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(20px); }
+        100% { transform: translateY(0px); }
+      }
+      
+      .shape-triangle {
+        width: 0; 
+        height: 0; 
+        border-left: 20px solid transparent;
+        border-right: 20px solid transparent;
+        border-bottom: 35px solid rgba(255, 255, 255, 0.2);
+      }
+
+      /* STRICT PRINT STYLES FOR CARD GENERATION */
+      @media print {
+        @page {
+          size: A4;
+          margin: 10mm; /* Standard margin for A4 */
+        }
+        
+        /* Hide EVERYTHING by default */
+        body * {
+          visibility: hidden;
+        }
+
+        /* Only show the wrapper and its children */
+        #printable-area, #printable-area * {
+          visibility: visible;
+        }
+
+        /* Position the wrapper */
+        #printable-area {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          margin: 0;
+          padding: 0;
+          background-color: white !important;
+        }
+
+        /* Force background colors/images to print */
+        body {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        /* Remove browser scrollbars */
+        ::-webkit-scrollbar {
+          display: none;
+        }
+        
+        /* Grid System for Cards - Optimized for A4 (2 columns) */
+        .print-grid {
+          display: grid !important;
+          grid-template-columns: repeat(2, 1fr) !important; 
+          gap: 5mm !important; /* Space between cards reduced for better fit */
+          row-gap: 5mm !important;
+        }
+
+        /* The Card Container - Strict Sizing */
+        .card-container {
+          break-inside: avoid;
+          page-break-inside: avoid;
+          border: 1px dashed #666; /* Thinner cutting line */
+          height: 85mm; /* Slightly shorter to fit 3 rows comfortably if needed, or 85mm standard */
+          width: 100%;
+          box-sizing: border-box;
+          overflow: hidden; /* Prevent content overflow */
+          position: relative;
+        }
+      }
+
+      /* Quill Image Alignment & Wrapping (Word-like) */
+      .ql-editor img { 
+        max-width: 100%; 
+        height: auto; 
+        transition: all 0.2s ease;
+      }
+      .ql-editor img.ql-align-center { 
+        display: block; 
+        margin: 1.5rem auto; 
+        clear: both;
+      }
+      .ql-editor img.ql-align-right { 
+        float: right; 
+        margin: 0.5rem 0 1rem 1.5rem; 
+        clear: right;
+      }
+      .ql-editor img.ql-align-left { 
+        float: left; 
+        margin: 0.5rem 1.5rem 1rem 0; 
+        clear: left;
+      }
+      /* Default wrapping (Through) for images without specific alignment */
+      .ql-editor img:not([class*="ql-align-"]) {
+        float: left;
+        margin: 0.5rem 1.5rem 1rem 0;
+      }
+      /* Ensure text wraps properly */
+      .ql-editor p {
+        line-height: 1.6;
+      }
+      /* Key CSS fix applied for word wrapping - Whole words only, Left aligned */
+      .ql-editor, .ql-editor *, .exam-content, .exam-content * {
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+        word-wrap: break-word !important;
+        hyphens: none !important; /* Disable automatic hyphenation */
+        white-space: pre-wrap !important; /* Preserve line breaks from editor */
+        text-align: left !important; /* Left aligned as requested */
+        line-height: 1.7 !important; /* Better readability */
+      }
+      /* Ensure words don't break mid-character but wrap as whole words */
+      .exam-content p, .exam-content span, .exam-content div {
+        word-break: normal !important;
+        overflow-wrap: break-word !important;
+      }
+      .ql-editor::after {
+        content: "";
+        display: table;
+        clear: both;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.37.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.90.1",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
