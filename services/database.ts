@@ -672,6 +672,11 @@ export const db = {
     await supabase.from('students').delete().eq('id', id);
   },
 
+  deleteUserResults: async (userId: string): Promise<void> => {
+      const { error } = await supabase.from('results').delete().eq('siswa_id', userId);
+      if (error) throw error;
+  },
+
   deleteExam: async (id: string): Promise<void> => {
     // Delete questions first (though Supabase might have cascade, better be safe)
     await supabase.from('questions').delete().eq('subject_id', id);

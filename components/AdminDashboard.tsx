@@ -206,6 +206,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
   const [isEditMappingGroupModalOpen, setIsEditMappingGroupModalOpen] = useState(false);
   const [editMappingForm, setEditMappingForm] = useState({
       date: '',
+      endDate: '',
       session: '',
       room: '',
       examId: ''
@@ -319,7 +320,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
     'Sesi 3': '13.00 - 15.00',
     'Sesi 4': '15.30 - 17.30'
   });
-  const [mappingEditForm, setMappingEditForm] = useState({ examId: '', examDate: '', room: '', session: '' });
+  const [mappingEditForm, setMappingEditForm] = useState({ examId: '', examDate: '', endDate: '', room: '', session: '' });
+  const [mappingMode, setMappingMode] = useState<'OBT' | 'TRYOUT'>('OBT');
   const [isMappingAccordionOpen, setIsMappingAccordionOpen] = useState(true);
 
   // Helper for Mapping History
@@ -582,8 +584,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
 
   const handleOpenEditMapping = (group: any) => {
       setEditingMappingGroup(group);
+      let startDate = group.date;
+      let endDate = '';
+      if (group.date?.includes('|')) {
+          [startDate, endDate] = group.date.split('|');
+      }
       setEditMappingForm({
-          date: group.date,
+          date: startDate,
+          endDate: endDate,
           session: group.session,
           room: group.room,
           examId: group.examId
@@ -613,7 +621,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
               return;
           }
 
-          await db.updateStudentMappingBatch(studentIds, editingMappingGroup, editMappingForm);
+          let finalExamDate = editMappingForm.date;
+          if (editMappingForm.endDate) {
+              finalExamDate = `${editMappingForm.date}|${editMappingForm.endDate}`;
+          }
+
+          const newMapping = {
+              ...editMappingForm,
+              date: finalExamDate
+          };
+
+          await db.updateStudentMappingBatch(studentIds, editingMappingGroup, newMapping);
           showToast("Mapping berhasil diperbarui", 'success');
           setIsEditMappingGroupModalOpen(false);
           loadData();
@@ -1813,11 +1831,16 @@ ANS: B`;
       
       setIsLoadingData(true);
       try {
+          let finalExamDate = mappingEditForm.examDate;
+          if (mappingMode === 'TRYOUT') {
+              finalExamDate = `${mappingEditForm.examDate}|${mappingEditForm.endDate}`;
+          }
+
           await db.updateStudentMapping(mappingSelectedIds, {
               examId: mappingEditForm.examId,
-              examDate: mappingEditForm.examDate || undefined,
+              examDate: finalExamDate || undefined,
               room: mappingEditForm.room || undefined,
-              session: mappingEditForm.session || undefined
+              session: mappingMode === 'TRYOUT' ? '-' : (mappingEditForm.session || undefined)
           });
           await loadData();
           setMappingSelectedIds([]);
@@ -2764,13 +2787,15 @@ ANS: B`;
                                                {user.role !== UserRole.PROKTOR && (
                                                    <button 
                                                        onClick={() => {
-                                                           showConfirm('Hapus peserta ini?', async () => { 
-                                                               await db.deleteUser(u.id); 
+                                                           showConfirm('Hapus data hasil ujian peserta ini secara permanen?', async () => { 
+                                                               await db.deleteUserResults(u.id);
+                                                               await db.resetUserStatus(u.id);
+                                                               showToast('Data hasil ujian dihapus dan status di-reset.');
                                                                loadData(); 
                                                            });
                                                        }}
                                                        className="text-red-600 bg-red-50 border border-red-200 p-1.5 rounded hover:bg-red-100 transition"
-                                                       title="Hapus Peserta"
+                                                       title="Hapus Hasil Ujian"
                                                    >
                                                        <Trash2 size={16} />
                                                    </button>
@@ -3009,6 +3034,16 @@ ANS: B`;
                           <h4 className="text-sm font-bold text-blue-800 mb-3 flex items-center">
                               <Edit size={16} className="mr-2"/> Pengaturan Massal ({mappingSelectedIds.length} Peserta Terpilih)
                           </h4>
+                          <div className="mb-4 flex gap-4">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="radio" name="mappingMode" checked={mappingMode === 'OBT'} onChange={() => setMappingMode('OBT')} className="w-4 h-4 text-blue-600" />
+                                  <span className="text-sm font-medium text-gray-700">Online Based Test</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                  <input type="radio" name="mappingMode" checked={mappingMode === 'TRYOUT'} onChange={() => setMappingMode('TRYOUT')} className="w-4 h-4 text-blue-600" />
+                                  <span className="text-sm font-medium text-gray-700">Try Out Online</span>
+                              </label>
+                          </div>
                           <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
                               <div>
                                   <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Mata Pelajaran</label>
@@ -3018,9 +3053,26 @@ ANS: B`;
                                   </select>
                               </div>
                               <div>
-                                  <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Tanggal</label>
+                                  <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">{mappingMode === 'TRYOUT' ? 'Tanggal Mulai' : 'Tanggal'}</label>
                                   <input type="date" className="w-full border rounded p-2 text-sm bg-white" value={mappingEditForm.examDate} onChange={e => setMappingEditForm({...mappingEditForm, examDate: e.target.value})} />
                               </div>
+                              {mappingMode === 'TRYOUT' ? (
+                                  <div>
+                                      <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Tanggal Selesai</label>
+                                      <input type="date" className="w-full border rounded p-2 text-sm bg-white" value={mappingEditForm.endDate} onChange={e => setMappingEditForm({...mappingEditForm, endDate: e.target.value})} />
+                                  </div>
+                              ) : (
+                                  <div>
+                                      <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Sesi</label>
+                                      <select className="w-full border rounded p-2 text-sm bg-white" value={mappingEditForm.session} onChange={e => setMappingEditForm({...mappingEditForm, session: e.target.value})}>
+                                          <option value="">Pilih Sesi...</option>
+                                          <option value="Sesi 1">Sesi 1</option>
+                                          <option value="Sesi 2">Sesi 2</option>
+                                          <option value="Sesi 3">Sesi 3</option>
+                                          <option value="Sesi 4">Sesi 4</option>
+                                      </select>
+                                  </div>
+                              )}
                               <div>
                                   <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Ruang</label>
                                   <select 
@@ -3032,16 +3084,6 @@ ANS: B`;
                                       {Array.from(new Set(staffList.filter(s => s.role === UserRole.PROKTOR).map(s => s.room))).filter(Boolean).sort().map(r => (
                                           <option key={r} value={r}>{r}</option>
                                       ))}
-                                  </select>
-                              </div>
-                              <div>
-                                  <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Sesi</label>
-                                  <select className="w-full border rounded p-2 text-sm bg-white" value={mappingEditForm.session} onChange={e => setMappingEditForm({...mappingEditForm, session: e.target.value})}>
-                                      <option value="">Pilih Sesi...</option>
-                                      <option value="Sesi 1">Sesi 1</option>
-                                      <option value="Sesi 2">Sesi 2</option>
-                                      <option value="Sesi 3">Sesi 3</option>
-                                      <option value="Sesi 4">Sesi 4</option>
                                   </select>
                               </div>
                               <button onClick={handleSaveStudentMapping} disabled={isLoadingData || mappingSelectedIds.length === 0} className="bg-blue-600 text-white py-2 rounded font-bold text-sm hover:bg-blue-700 disabled:opacity-50 shadow-md">
@@ -3156,9 +3198,21 @@ ANS: B`;
                                   {getMappingHistory().map((h, idx) => {
                                       const exam = exams.find(e => e.id === h.examId);
                                       const timeRange = settings.sessionTimes?.[h.session] || '-';
-                                      const dateObj = new Date(h.date);
-                                      const dayName = dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
-                                      const formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                                      
+                                      let dayName = '';
+                                      let formattedDate = '';
+                                      
+                                      if (h.date?.includes('|')) {
+                                          const [start, end] = h.date.split('|');
+                                          const startDateObj = new Date(start);
+                                          const endDateObj = new Date(end);
+                                          dayName = 'Try Out';
+                                          formattedDate = `${startDateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - ${endDateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+                                      } else {
+                                          const dateObj = new Date(h.date);
+                                          dayName = dateObj.toLocaleDateString('id-ID', { weekday: 'long' });
+                                          formattedDate = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                                      }
                                       
                                       return (
                                           <tr key={idx} className="hover:bg-gray-50">
@@ -5271,7 +5325,7 @@ ANS: B`;
                       </div>
 
                       <div>
-                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tanggal Ujian</label>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tanggal Ujian (Mulai)</label>
                           <input 
                               type="date" 
                               className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
@@ -5279,6 +5333,18 @@ ANS: B`;
                               onChange={(e) => setEditMappingForm({...editMappingForm, date: e.target.value})}
                           />
                       </div>
+                      
+                      {editMappingForm.endDate !== undefined && editMappingForm.endDate !== '' && (
+                          <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tanggal Ujian (Selesai)</label>
+                              <input 
+                                  type="date" 
+                                  className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                  value={editMappingForm.endDate}
+                                  onChange={(e) => setEditMappingForm({...editMappingForm, endDate: e.target.value})}
+                              />
+                          </div>
+                      )}
 
                       <div className="grid grid-cols-2 gap-4">
                           <div>
@@ -5287,10 +5353,15 @@ ANS: B`;
                                   className="w-full border rounded-lg p-3 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                                   value={editMappingForm.session}
                                   onChange={(e) => setEditMappingForm({...editMappingForm, session: e.target.value})}
+                                  disabled={editMappingForm.endDate !== undefined && editMappingForm.endDate !== ''}
                               >
-                                  {Object.keys(settings.sessionTimes || {}).map(s => (
-                                      <option key={s} value={s}>{s}</option>
-                                  ))}
+                                  {editMappingForm.endDate !== undefined && editMappingForm.endDate !== '' ? (
+                                      <option value="-">-</option>
+                                  ) : (
+                                      Object.keys(settings.sessionTimes || {}).map(s => (
+                                          <option key={s} value={s}>{s}</option>
+                                      ))
+                                  )}
                               </select>
                           </div>
                           <div>

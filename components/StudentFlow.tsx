@@ -69,6 +69,13 @@ export const StudentFlow: React.FC<StudentFlowProps> = ({ user, onStartExam, onL
         if (!isMapped) return false;
         
         const mapping = user.mappings?.find(m => m.examId === e.id);
+        
+        // Handle Try Out date range (e.g., "2023-10-01|2023-10-05")
+        if (mapping?.examDate?.includes('|')) {
+            const [start, end] = mapping.examDate.split('|');
+            return todayStr >= start && todayStr <= end;
+        }
+
         // Check if exam date matches today (either in mapping or in exam itself)
         return mapping?.examDate === todayStr || e.examDate === todayStr;
     });
