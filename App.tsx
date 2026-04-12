@@ -8,7 +8,6 @@ import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { StudentFlow } from './components/StudentFlow';
 import { BackgroundShapes } from './components/BackgroundShapes';
 import { LogIn, Lock, Eye, EyeOff, Calendar, X, AlertTriangle } from 'lucide-react';
-import { PWAInstallPrompt } from './components/PWAInstallPrompt';
 import 'katex/dist/katex.min.css';
 
 const UserCircleIcon = ({className, size}: {className?: string, size?: number}) => (
@@ -96,6 +95,20 @@ const App: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Request fullscreen immediately on user gesture
+    try {
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(err => console.warn(err));
+        } else if ((document.documentElement as any).webkitRequestFullscreen) { /* Safari */
+            (document.documentElement as any).webkitRequestFullscreen();
+        } else if ((document.documentElement as any).msRequestFullscreen) { /* IE11 */
+            (document.documentElement as any).msRequestFullscreen();
+        }
+    } catch (err) {
+        console.warn("Fullscreen request denied or failed:", err);
+    }
+
     setLoading(true);
     
     try {
@@ -138,20 +151,15 @@ const App: React.FC = () => {
               setBlockedSchedule(myExams);
               setShowBlockedModal(true);
               setLoading(false);
+              
+              // Exit fullscreen if blocked
+              try {
+                  if (document.exitFullscreen) {
+                      document.exitFullscreen().catch(() => {});
+                  }
+              } catch (e) {}
+              
               return; 
-          }
-
-          // If OK, proceed to trigger fullscreen
-          try {
-              if (document.documentElement.requestFullscreen) {
-                  await document.documentElement.requestFullscreen();
-              } else if ((document.documentElement as any).webkitRequestFullscreen) { /* Safari */
-                  await (document.documentElement as any).webkitRequestFullscreen();
-              } else if ((document.documentElement as any).msRequestFullscreen) { /* IE11 */
-                  await (document.documentElement as any).msRequestFullscreen();
-              }
-          } catch (err) {
-              console.warn("Fullscreen request denied or failed:", err);
           }
         }
 
@@ -160,10 +168,22 @@ const App: React.FC = () => {
         setCurrentUser(user);
       } else {
         showToast('Data tidak ditemukan atau Password salah. \nPastikan Username dan Password benar.', 'error');
+        // Exit fullscreen on error
+        try {
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            }
+        } catch (e) {}
       }
     } catch (error: any) {
       console.error(error);
       showToast(error.message || 'Terjadi kesalahan saat login.', 'error');
+      // Exit fullscreen on error
+      try {
+          if (document.exitFullscreen) {
+              document.exitFullscreen().catch(() => {});
+          }
+      } catch (e) {}
     } finally {
       setLoading(false);
     }
@@ -207,7 +227,6 @@ const App: React.FC = () => {
 
   return (
     <>
-      <PWAInstallPrompt />
       
       {!isSupabaseConfigured ? (
         <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 z-[9999] relative">
@@ -273,7 +292,7 @@ const App: React.FC = () => {
               <h2 className="text-2xl font-bold text-center text-gray-800 mb-1">Selamat Datang</h2>
               <p className="text-gray-500 text-center mb-8 text-sm">Silakan login untuk memulai ujian</p>
 
-              <form onSubmit={handleLogin} className="space-y-5">
+              <form onSubmit={handleLogin} className="space-y-5" autoComplete="off">
                   <div>
                       <label className="block text-gray-700 text-sm font-bold mb-2">Nomor Peserta / Username</label>
                       <div className="relative">
@@ -285,6 +304,7 @@ const App: React.FC = () => {
                               style={{ borderColor: settings.themeColor }}
                               value={loginInput}
                               onChange={(e) => setLoginInput(e.target.value)}
+                              autoComplete="new-password"
                           />
                       </div>
                   </div>
@@ -300,6 +320,7 @@ const App: React.FC = () => {
                               style={{ borderColor: settings.themeColor }}
                               value={passwordInput}
                               onChange={(e) => setPasswordInput(e.target.value)}
+                              autoComplete="new-password"
                           />
                           <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}

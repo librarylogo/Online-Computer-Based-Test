@@ -745,6 +745,13 @@ export const db = {
 
   resetUserStatus: async (userId: string): Promise<void> => {
     await supabase.from('students').update({ is_login: false, status: 'idle' }).eq('id', userId);
+    // Also reset any finished results from today to working so they can resume
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    await supabase.from('results')
+        .update({ status: 'working' })
+        .eq('siswa_id', userId)
+        .gte('start_time', today.toISOString());
   },
 
   startExamSession: async (userId: string, examId: string): Promise<void> => {

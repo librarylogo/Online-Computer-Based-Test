@@ -268,6 +268,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
   const [monitoringSchoolFilter, setMonitoringSchoolFilter] = useState<string>('ALL');
   const [monitoringClassFilter, setMonitoringClassFilter] = useState<string>('ALL');
   const [monitoringSubjectFilter, setMonitoringSubjectFilter] = useState<string>('ALL');
+  const [monitoringSortConfig, setMonitoringSortConfig] = useState<{key: string, direction: 'asc'|'desc'} | null>(null);
   
   const [resultRoomFilter, setResultRoomFilter] = useState<string>('ALL');
   const [resultSessionFilter, setResultSessionFilter] = useState<string>('ALL');
@@ -1711,7 +1712,53 @@ ANS: B`;
   );
   
   // Monitoring Filtered Users
-  const filteredMonitoringUsers = getMonitoringUsers('ALL');
+  let finalMonitoringUsers = getMonitoringUsers('ALL').filter(u => {
+      const matchesRoom = dashboardRoomFilter === 'ALL' || u.mappings?.some(m => m.room === dashboardRoomFilter);
+      const matchesSession = dashboardSessionFilter === 'ALL' || u.mappings?.some(m => m.session === dashboardSessionFilter);
+      const matchesSchool = monitoringSchoolFilter === 'ALL' || u.school === monitoringSchoolFilter;
+      const matchesClass = monitoringClassFilter === 'ALL' || u.class === monitoringClassFilter;
+      const matchesSubject = monitoringSubjectFilter === 'ALL' || u.mappings?.some(m => m.examId === monitoringSubjectFilter);
+      return matchesRoom && matchesSession && matchesSchool && matchesClass && matchesSubject;
+  });
+
+  if (monitoringSortConfig) {
+      finalMonitoringUsers.sort((a, b) => {
+          let aValue: any = '';
+          let bValue: any = '';
+          
+          if (monitoringSortConfig.key === 'name') {
+              aValue = a.name.toLowerCase();
+              bValue = b.name.toLowerCase();
+          } else if (monitoringSortConfig.key === 'nomorPeserta') {
+              aValue = a.nomorPeserta || '';
+              bValue = b.nomorPeserta || '';
+          } else if (monitoringSortConfig.key === 'school') {
+              aValue = a.school || '';
+              bValue = b.school || '';
+          } else if (monitoringSortConfig.key === 'room') {
+              aValue = a.mappings?.[0]?.room || '';
+              bValue = b.mappings?.[0]?.room || '';
+          } else if (monitoringSortConfig.key === 'session') {
+              aValue = a.mappings?.[0]?.session || '';
+              bValue = b.mappings?.[0]?.session || '';
+          } else if (monitoringSortConfig.key === 'status') {
+              aValue = getStudentStatusInfo(a).label;
+              bValue = getStudentStatusInfo(b).label;
+          }
+
+          if (aValue < bValue) return monitoringSortConfig.direction === 'asc' ? -1 : 1;
+          if (aValue > bValue) return monitoringSortConfig.direction === 'asc' ? 1 : -1;
+          return 0;
+      });
+  }
+
+  const handleMonitoringSort = (key: string) => {
+      let direction: 'asc' | 'desc' = 'asc';
+      if (monitoringSortConfig && monitoringSortConfig.key === key && monitoringSortConfig.direction === 'asc') {
+          direction = 'desc';
+      }
+      setMonitoringSortConfig({ key, direction });
+  };
 
   // --- Calculate Available Schools for Mapping (Filtering Logic) ---
   const getSchoolsAvailability = () => {
@@ -2661,30 +2708,22 @@ ANS: B`;
                                         <input 
                                             type="checkbox" 
                                             className="w-4 h-4 rounded cursor-pointer"
-                                            checked={filteredMonitoringUsers.length > 0 && selectedStudentIds.length === filteredMonitoringUsers.length}
-                                            onChange={() => toggleSelectAll(filteredMonitoringUsers)}
+                                            checked={finalMonitoringUsers.length > 0 && selectedStudentIds.length === finalMonitoringUsers.length}
+                                            onChange={() => toggleSelectAll(finalMonitoringUsers)}
                                         />
                                     </th>
-                                    <th className="p-3">Nama</th>
-                                    <th className="p-3">Nomor Peserta</th>
-                                    <th className="p-3">Sekolah</th>
-                                    <th className="p-3 text-center">Ruang</th>
-                                    <th className="p-3 text-center">Sesi</th>
-                                    <th className="p-3">Status</th>
+                                    <th className="p-3 cursor-pointer hover:bg-gray-100" onClick={() => handleMonitoringSort('name')}>Nama {monitoringSortConfig?.key === 'name' ? (monitoringSortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                                    <th className="p-3 cursor-pointer hover:bg-gray-100" onClick={() => handleMonitoringSort('nomorPeserta')}>Nomor Peserta {monitoringSortConfig?.key === 'nomorPeserta' ? (monitoringSortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                                    <th className="p-3 cursor-pointer hover:bg-gray-100" onClick={() => handleMonitoringSort('school')}>Sekolah {monitoringSortConfig?.key === 'school' ? (monitoringSortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                                    <th className="p-3 text-center cursor-pointer hover:bg-gray-100" onClick={() => handleMonitoringSort('room')}>Ruang {monitoringSortConfig?.key === 'room' ? (monitoringSortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                                    <th className="p-3 text-center cursor-pointer hover:bg-gray-100" onClick={() => handleMonitoringSort('session')}>Sesi {monitoringSortConfig?.key === 'session' ? (monitoringSortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                                    <th className="p-3 cursor-pointer hover:bg-gray-100" onClick={() => handleMonitoringSort('status')}>Status {monitoringSortConfig?.key === 'status' ? (monitoringSortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                                     <th className="p-3 text-center">Kontrol</th>
+                                    <th className="p-3 text-center">Hapus</th>
                                 </tr>
                            </thead>
                            <tbody className="divide-y">
-                                {filteredMonitoringUsers
-                                   .filter(u => {
-                                       const matchesRoom = dashboardRoomFilter === 'ALL' || u.mappings?.some(m => m.room === dashboardRoomFilter);
-                                       const matchesSession = dashboardSessionFilter === 'ALL' || u.mappings?.some(m => m.session === dashboardSessionFilter);
-                                        const matchesSchool = monitoringSchoolFilter === 'ALL' || u.school === monitoringSchoolFilter;
-                                        const matchesClass = monitoringClassFilter === 'ALL' || u.class === monitoringClassFilter;
-                                        const matchesSubject = monitoringSubjectFilter === 'ALL' || u.mappings?.some(m => m.examId === monitoringSubjectFilter);
-                                        
-                                        return matchesRoom && matchesSession && matchesSchool && matchesClass && matchesSubject;
-                                   })
+                                {finalMonitoringUsers
                                    .map(u => {
                                    const statusInfo = getStudentStatusInfo(u);
                                    const mapping = u.mappings?.[0];
@@ -2721,11 +2760,27 @@ ANS: B`;
                                                     <Flame size={16} />
                                                </button>
                                            </td>
+                                           <td className="p-3 text-center">
+                                               {user.role !== UserRole.PROKTOR && (
+                                                   <button 
+                                                       onClick={() => {
+                                                           showConfirm('Hapus peserta ini?', async () => { 
+                                                               await db.deleteUser(u.id); 
+                                                               loadData(); 
+                                                           });
+                                                       }}
+                                                       className="text-red-600 bg-red-50 border border-red-200 p-1.5 rounded hover:bg-red-100 transition"
+                                                       title="Hapus Peserta"
+                                                   >
+                                                       <Trash2 size={16} />
+                                                   </button>
+                                               )}
+                                           </td>
                                        </tr>
                                    )
                                })}
-                               {filteredMonitoringUsers.length === 0 && (
-                                   <tr><td colSpan={8} className="p-4 text-center text-gray-500">Tidak ada peserta yang sedang online.</td></tr>
+                               {finalMonitoringUsers.length === 0 && (
+                                   <tr><td colSpan={9} className="p-4 text-center text-gray-500">Tidak ada peserta yang sedang online.</td></tr>
                                )}
                            </tbody>
                        </table>

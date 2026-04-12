@@ -28,19 +28,41 @@ interface ExamInterfaceProps {
   settings: AppSettings;
 }
 
-// Fisher-Yates Shuffle Algorithm
-function shuffleArray<T>(array: T[]): T[] {
+// Simple seeded PRNG (Mulberry32)
+function mulberry32(a: number) {
+    return function() {
+      var t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+}
+
+function hashString(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash;
+}
+
+// Fisher-Yates Shuffle Algorithm with optional seed
+function shuffleArray<T>(array: T[], seedStr?: string): T[] {
   const newArray = [...array];
+  const random = seedStr ? mulberry32(hashString(seedStr)) : Math.random;
   for (let i = newArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
   }
   return newArray;
 }
 
 // Helper to shuffle options inside a question and update the correctIndex map
-const processQuestionsWithShuffledOptions = (questions: Question[]): Question[] => {
-    return questions.map(q => {
+const processQuestionsWithShuffledOptions = (questions: Question[], seedBase?: string): Question[] => {
+    return questions.map((q, qIndex) => {
+        const seed = seedBase ? `${seedBase}_${q.id}_${qIndex}` : undefined;
         if (q.type === 'TRUE_FALSE' || q.type === 'URAIAN') return q;
 
         if (q.type === 'MATCHING') {
@@ -49,7 +71,7 @@ const processQuestionsWithShuffledOptions = (questions: Question[]): Question[] 
                 const [left, right] = opt.split('|');
                 return { left, right };
             });
-            const rights = shuffleArray(pairs.map(p => p.right));
+            const rights = shuffleArray(pairs.map(p => p.right), seed);
             return {
                 ...q,
                 options: pairs.map(p => p.left), // Left sides in order
@@ -70,7 +92,7 @@ const processQuestionsWithShuffledOptions = (questions: Question[]): Question[] 
         });
 
         // 2. Shuffle the options
-        const shuffledMapped = shuffleArray(mappedOptions);
+        const shuffledMapped = shuffleArray(mappedOptions, seed);
 
         // 3. Reconstruct options array
         const newOptions = shuffledMapped.map(m => m.text);
@@ -130,24 +152,25 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
 
       // Ensure exam.questions is an array
       const questionsSource: Question[] = exam.questions || [];
+      const seedBase = `${user.id}_${exam.id}`;
       
       // 1. Shuffle Questions if enabled
-      const processedQ = exam.shuffleQuestions ? shuffleArray(questionsSource) : [...questionsSource];
+      const processedQ = exam.shuffleQuestions ? shuffleArray(questionsSource, seedBase) : [...questionsSource];
       
       // 2. Shuffle Options if enabled (or process for Matching)
       let result: Question[];
       if (exam.shuffleOptions) {
-          result = processQuestionsWithShuffledOptions(processedQ);
+          result = processQuestionsWithShuffledOptions(processedQ, seedBase);
       } else {
           // Even if not shuffling, we need to process MATCHING to set up the maps
-          result = processedQ.map(q => {
+          result = processedQ.map((q, qIndex) => {
               if (q.type === 'MATCHING') {
                   const pairs = q.options.map(opt => {
                       const [left, right] = opt.split('|');
                       return { left, right };
                   });
                   // For matching, we still shuffle the right side to make it a challenge
-                  const rights = shuffleArray(pairs.map(p => p.right));
+                  const rights = shuffleArray(pairs.map(p => p.right), `${seedBase}_${q.id}_${qIndex}`);
                   return {
                       ...q,
                       options: pairs.map(p => p.left),

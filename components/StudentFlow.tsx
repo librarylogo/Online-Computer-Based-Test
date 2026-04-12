@@ -77,7 +77,7 @@ export const StudentFlow: React.FC<StudentFlowProps> = ({ user, onStartExam, onL
 
     // 3. Get Results for this user
     const allResults = await db.getAllResults();
-    const myResults = allResults.filter(r => r.studentId === user.id);
+    const myResults = allResults.filter(r => r.studentId === user.id && r.status === 'finished');
     const finishedExamIds = myResults.map(r => r.examId);
     setCompletedExams(finishedExamIds);
   };
