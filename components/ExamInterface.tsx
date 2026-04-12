@@ -67,7 +67,7 @@ const processQuestionsWithShuffledOptions = (questions: Question[], seedBase?: s
 
         if (q.type === 'MATCHING') {
             // Options are "left|right". We want to keep lefts in order but shuffle rights.
-            const pairs = q.options.map(opt => {
+            const pairs = (q.options || []).map(opt => {
                 const [left, right] = opt.split('|');
                 return { left, right };
             });
@@ -81,7 +81,7 @@ const processQuestionsWithShuffledOptions = (questions: Question[], seedBase?: s
         }
 
         // 1. Map options to objects to track correctness
-        const mappedOptions = q.options.map((opt, idx) => {
+        const mappedOptions = (q.options || []).map((opt, idx) => {
             let isCorrect = false;
             if (q.type === 'PG') {
                 isCorrect = idx === q.correctIndex;
@@ -165,7 +165,7 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
           // Even if not shuffling, we need to process MATCHING to set up the maps
           result = processedQ.map((q, qIndex) => {
               if (q.type === 'MATCHING') {
-                  const pairs = q.options.map(opt => {
+                  const pairs = (q.options || []).map(opt => {
                       const [left, right] = opt.split('|');
                       return { left, right };
                   });
@@ -188,7 +188,9 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
   
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(() => {
       const saved = localStorage.getItem(indexKey);
-      return saved ? parseInt(saved, 10) : 0;
+      const parsed = saved ? parseInt(saved, 10) : 0;
+      const maxIndex = Math.max(0, (exam.questions?.length || 1) - 1);
+      return Math.min(Math.max(0, parsed), maxIndex);
   });
   
   // State for different answer types
@@ -272,8 +274,11 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
                         setAnswers(progress.answers);
                         setCheatingAttempts(progress.violation_count || 0);
                         if (progress.lastIndex !== undefined && progress.lastIndex !== null) {
-                            setCurrentQuestionIndex(progress.lastIndex);
-                            localStorage.setItem(indexKey, progress.lastIndex.toString());
+                            // Ensure index is within bounds
+                            const maxIndex = Math.max(0, (exam.questions?.length || 1) - 1);
+                            const safeIndex = Math.min(Math.max(0, progress.lastIndex), maxIndex);
+                            setCurrentQuestionIndex(safeIndex);
+                            localStorage.setItem(indexKey, safeIndex.toString());
                         }
                         localStorage.setItem(answersKey, JSON.stringify(progress.answers));
                         localStorage.setItem(cheatKey, (progress.violation_count || 0).toString());
@@ -342,7 +347,7 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
             points: updatedQ.points,
             // If options changed, we might have a problem with current answers.
             // But usually "fixing" means fixing text or a typo in an option.
-            options: updatedQ.options.length === oldQ.options.length ? oldQ.options : updatedQ.options,
+            options: (updatedQ.options || []).length === (oldQ.options || []).length ? oldQ.options : updatedQ.options,
         };
         
         localStorage.setItem(questionsKey, JSON.stringify(newQuestions));
@@ -375,7 +380,7 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
 
   useEffect(() => {
     // Calculate max possible score once
-    const max = activeQuestions.reduce((acc, q) => acc + q.points, 0);
+    const max = activeQuestions.reduce((acc, q) => acc + (q.points || 0), 0);
     setMaxPossibleScore(max);
 
     const timer = setInterval(() => {
@@ -470,15 +475,21 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
   // Render Math when question changes
   useEffect(() => {
     if (questionRef.current) {
-      renderMathInElement(questionRef.current, {
-        delimiters: [
-          { left: '$$', right: '$$', display: true },
-          { left: '$', right: '$', display: false },
-          { left: '\\(', right: '\\)', display: false },
-          { left: '\\[', right: '\\]', display: true }
-        ],
-        throwOnError: false
-      });
+      if (typeof renderMathInElement === 'function') {
+          try {
+              renderMathInElement(questionRef.current, {
+                delimiters: [
+                  { left: '$$', right: '$$', display: true },
+                  { left: '$', right: '$', display: false },
+                  { left: '\\(', right: '\\)', display: false },
+                  { left: '\\[', right: '\\]', display: true }
+                ],
+                throwOnError: false
+              });
+          } catch (e) {
+              console.error("Auto-render error", e);
+          }
+      }
       
       // Also handle Quill's specific formula format if any
       const formulas = questionRef.current.querySelectorAll('.ql-formula');
@@ -487,7 +498,9 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
         if (tex) {
           try {
             const span = document.createElement('span');
-            (window as any).katex.render(tex, span, { throwOnError: false });
+            if (typeof (window as any).katex?.render === 'function') {
+                (window as any).katex.render(tex, span, { throwOnError: false });
+            }
             el.parentNode?.replaceChild(span, el);
           } catch (e) {
             console.error("KaTeX render error", e);
@@ -532,7 +545,7 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
 
   const handleMultiChoice = (optionIndex: number) => {
     const newAnswers = [...answers];
-    const currentSelected = newAnswers[currentQuestionIndex] || [];
+    const currentSelected = Array.isArray(newAnswers[currentQuestionIndex]) ? newAnswers[currentQuestionIndex] : [];
     const requiredCount = currentQ.correctIndices?.length || 0;
     
     if (currentSelected.includes(optionIndex)) {
@@ -699,6 +712,23 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
 
   const currentQ = activeQuestions[currentQuestionIndex];
   
+  if (!currentQ) {
+      return (
+          <div className="min-h-screen flex items-center justify-center bg-gray-50">
+              <div className="text-center p-8 bg-white rounded-lg shadow-lg">
+                  <h2 className="text-2xl font-bold text-gray-700 mb-2">Memuat Soal...</h2>
+                  <p className="text-gray-500 mb-4">Mempersiapkan ujian Anda.</p>
+                  <button 
+                      onClick={() => window.location.reload()} 
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                      Muat Ulang Halaman
+                  </button>
+              </div>
+          </div>
+      );
+  }
+
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -741,7 +771,7 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
           );
       } else if (q.type === 'PG_KOMPLEKS') {
           const requiredCount = q.correctIndices?.length || 0;
-          const currentSelected = answers[currentQuestionIndex] || [];
+          const currentSelected = Array.isArray(answers[currentQuestionIndex]) ? answers[currentQuestionIndex] : [];
           const isLimitReached = currentSelected.length >= requiredCount;
 
           return (
@@ -786,9 +816,9 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
             </div>
           );
       } else if (q.type === 'MATCHING') {
-          const leftSides = q.options;
+          const leftSides = q.options || [];
           const rightSides = q.matchingRights || [];
-          const currentAnswer = answers[currentQuestionIndex] || {};
+          const currentAnswer = (typeof answers[currentQuestionIndex] === 'object' && answers[currentQuestionIndex] !== null && !Array.isArray(answers[currentQuestionIndex])) ? answers[currentQuestionIndex] : {};
 
           return (
               <div className="space-y-4">
@@ -845,9 +875,10 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
   };
 
   const canGoNext = useMemo(() => {
+    if (!currentQ) return false;
     if (currentQ.type === 'PG_KOMPLEKS') {
         if (markedDoubts[currentQuestionIndex]) return true;
-        const currentCount = (answers[currentQuestionIndex] || []).length;
+        const currentCount = (Array.isArray(answers[currentQuestionIndex]) ? answers[currentQuestionIndex] : []).length;
         if (currentCount === 0) return true; // Can skip if no answer selected
         const requiredCount = currentQ.correctIndices?.length || 0;
         return currentCount === requiredCount;
