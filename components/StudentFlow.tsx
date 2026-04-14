@@ -243,7 +243,7 @@ export const StudentFlow: React.FC<StudentFlowProps> = ({ user, onStartExam, onL
                             `}
                         >
                              <div className="text-center w-full z-10 mt-4">
-                                 <h3 className="text-xl font-extrabold text-gray-800 mb-1 leading-tight line-clamp-2">{exam.subject}</h3>
+                                 <h3 className="text-xl font-extrabold text-gray-800 mb-1 leading-tight line-clamp-2">{exam.title}</h3>
                                  <div className="flex justify-center gap-2 text-xs font-bold text-gray-500 mb-2 bg-gray-50 p-2 rounded-lg inline-flex">
                                      <span className="flex items-center"><span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1"></span>{exam.durationMinutes} Menit</span>
                                      <span className="flex items-center"><span className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-1"></span>{exam.questions.length} Soal</span>

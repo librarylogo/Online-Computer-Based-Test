@@ -4,7 +4,7 @@ import { User, UserRole, Exam, ExamResult, AppSettings } from '../types';
 // Initial Mock Data
 let MOCK_SETTINGS: AppSettings = {
   appName: 'UJI TKA MANDIRI',
-  schoolLogoUrl: 'https://lh3.googleusercontent.com/d/1UXDrhKgeSjfFks_oXIMOVYgxFG_Bh1nm', // Default Logo (App Logo) for Card Printing
+  schoolLogoUrl: 'https://lh3.googleusercontent.com/d/1tQPCSlVqJv08xNKeZRZhtRKC8T8PF-Uj', // Default Logo (App Logo) for Card Printing
   themeColor: '#2459a9', // Default Blue
   gradientEndColor: '#60a5fa', // Blue-400
   logoStyle: 'circle',

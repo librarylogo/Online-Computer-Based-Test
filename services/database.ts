@@ -8,7 +8,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   themeColor: '#2459a9',
   gradientEndColor: '#60a5fa',
   logoStyle: 'circle',
-  schoolLogoUrl: 'https://lh3.googleusercontent.com/d/1OtRkYlUrTr89sYj1Wj1hwTO7NjWXoLPf?authuser=0',
+  schoolLogoUrl: 'https://lh3.googleusercontent.com/d/1tQPCSlVqJv08xNKeZRZhtRKC8T8PF-Uj',
   antiCheat: {
     isActive: true,
     freezeDurationSeconds: 15,

@@ -650,6 +650,191 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
       });
   };
 
+  const handlePrintCards = () => {
+      const filteredUsers = getMonitoringUsers(selectedSchoolFilter, selectedRoomFilter, selectedSessionFilter);
+      if (filteredUsers.length === 0) {
+          showToast("Tidak ada peserta untuk dicetak", "error");
+          return;
+      }
+
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) return;
+
+      let content = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <title>Cetak Kartu Peserta</title>
+          <style>
+              body {
+                  font-family: Arial, sans-serif;
+                  margin: 0;
+                  padding: 20px;
+                  background: #f0f0f0;
+              }
+              .page {
+                  display: grid;
+                  grid-template-columns: repeat(2, 1fr);
+                  gap: 20px;
+                  page-break-after: always;
+              }
+              .card {
+                  background: white;
+                  border: 2px solid #000;
+                  border-radius: 8px;
+                  padding: 15px;
+                  width: 100%;
+                  box-sizing: border-box;
+                  position: relative;
+                  overflow: hidden;
+              }
+              .card::before {
+                  content: "";
+                  position: absolute;
+                  top: 0; left: 0; right: 0;
+                  height: 80px;
+                  background: ${themeColor}20;
+                  z-index: 0;
+              }
+              .header {
+                  display: flex;
+                  align-items: center;
+                  border-bottom: 2px solid #000;
+                  padding-bottom: 10px;
+                  margin-bottom: 15px;
+                  position: relative;
+                  z-index: 1;
+              }
+              .logo {
+                  width: 60px;
+                  height: 60px;
+                  object-fit: contain;
+                  margin-right: 15px;
+              }
+              .title-container {
+                  flex: 1;
+                  text-align: center;
+              }
+              .title-container h2 {
+                  margin: 0;
+                  font-size: 16px;
+                  font-weight: bold;
+                  text-transform: uppercase;
+              }
+              .title-container h3 {
+                  margin: 5px 0 0 0;
+                  font-size: 14px;
+                  font-weight: normal;
+              }
+              .body {
+                  position: relative;
+                  z-index: 1;
+              }
+              table {
+                  width: 100%;
+                  border-collapse: collapse;
+                  font-size: 12px;
+                  font-weight: bold;
+              }
+              td {
+                  padding: 4px 0;
+                  vertical-align: top;
+              }
+              td:first-child {
+                  width: 110px;
+              }
+              .footer {
+                  display: flex;
+                  justify-content: space-between;
+                  margin-top: 15px;
+                  position: relative;
+                  z-index: 1;
+              }
+              .photo-box {
+                  width: 3cm;
+                  height: 4cm;
+                  border: 1px dashed #000;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 10px;
+                  color: #666;
+                  text-align: center;
+              }
+              .signature {
+                  text-align: center;
+                  font-size: 12px;
+                  display: flex;
+                  flex-direction: column;
+                  justify-content: space-between;
+                  padding-top: 10px;
+              }
+              
+              @media print {
+                  body { background: white; padding: 0; }
+                  .page { gap: 10px; }
+                  .card { border: 1px solid #000; page-break-inside: avoid; }
+              }
+          </style>
+      </head>
+      <body>
+      `;
+
+      let cardsCount = 0;
+      content += `<div class="page">`;
+      
+      filteredUsers.forEach((u, index) => {
+          if (cardsCount > 0 && cardsCount % 6 === 0) {
+              content += `</div><div class="page">`;
+          }
+          
+          content += `
+          <div class="card">
+              <div class="header">
+                  <img src="${settings.schoolLogoUrl}" class="logo" alt="Logo">
+                  <div class="title-container">
+                      <h2>KARTU PESERTA UJIAN</h2>
+                      <h3>${appName}</h3>
+                  </div>
+              </div>
+              <div class="body">
+                  <table>
+                      <tr><td>Nama Peserta</td><td>: ${u.name}</td></tr>
+                      <tr><td>Nomor Peserta</td><td>: ${u.nomorPeserta}</td></tr>
+                      <tr><td>Password</td><td>: ${u.password || '12345'}</td></tr>
+                      <tr><td>Sekolah</td><td>: ${u.school}</td></tr>
+                      <tr><td>Ruang / Sesi</td><td>: ${u.room || '-'} / ${u.session || '-'}</td></tr>
+                  </table>
+              </div>
+              <div class="footer">
+                  <div class="photo-box">Pas Foto<br>3x4</div>
+                  <div class="signature">
+                      <p>Panitia Ujian,</p>
+                      <br><br><br>
+                      <p>___________________</p>
+                  </div>
+              </div>
+          </div>
+          `;
+          cardsCount++;
+      });
+
+      content += `</div>
+          <script>
+              window.onload = function() {
+                  setTimeout(() => {
+                      window.print();
+                  }, 500);
+              };
+          </script>
+      </body>
+      </html>
+      `;
+
+      printWindow.document.write(content);
+      printWindow.document.close();
+  };
+
   const handleCreateExam = async () => {
       if(!newExamTitle.trim()) return showToast("Nama Mata Pelajaran wajib diisi!", 'error');
       
@@ -1093,6 +1278,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
       } catch (e) {
           showToast("Gagal memperbarui bobot soal", "error");
       }
+  };
+
+  const handleUpdateAllQuestionPoints = async (newPoints: number) => {
+      if (!viewingQuestionsExam) return;
+      showConfirm(`Ubah semua bobot soal menjadi ${newPoints}?`, async () => {
+          try {
+              const updatedQuestions = viewingQuestionsExam.questions.map(q => ({ ...q, points: newPoints }));
+              
+              // Update all questions in DB sequentially to avoid overwhelming the connection
+              for (const q of updatedQuestions) {
+                  await db.updateQuestion(q);
+              }
+              
+              const updatedExam = { ...viewingQuestionsExam, questions: updatedQuestions };
+              setViewingQuestionsExam(updatedExam);
+              setExams(exams.map(ex => ex.id === updatedExam.id ? updatedExam : ex));
+              showToast(`Bobot semua soal diubah menjadi ${newPoints}`);
+          } catch (e) {
+              showToast("Gagal memperbarui bobot soal", "error");
+          }
+      });
   };
 
   const handleToggleShuffle = async (field: 'shuffleQuestions' | 'shuffleOptions', value: boolean) => {
@@ -2908,6 +3114,25 @@ ANS: B`;
                                       />
                                       Acak Opsi
                                   </label>
+                                  <div className="flex items-center gap-2 border-l pl-4 ml-2">
+                                      <label className="text-xs font-bold text-gray-600">Set Semua Bobot:</label>
+                                      <input 
+                                          type="number" 
+                                          min="0"
+                                          className="border rounded p-1 w-16 text-xs text-center"
+                                          id="globalPointsInput"
+                                          defaultValue="10"
+                                      />
+                                      <button 
+                                          onClick={() => {
+                                              const val = Number((document.getElementById('globalPointsInput') as HTMLInputElement).value);
+                                              handleUpdateAllQuestionPoints(val);
+                                          }}
+                                          className="bg-orange-500 text-white px-2 py-1 rounded text-xs font-bold hover:bg-orange-600"
+                                      >
+                                          Terapkan
+                                      </button>
+                                  </div>
                               </div>
                           </h4>
                           <div className="flex flex-wrap gap-2 mb-6 bg-gray-50 p-4 rounded-lg border">
@@ -3378,6 +3603,14 @@ ANS: B`;
                                    className={`bg-blue-600 text-white px-3 py-2 rounded text-sm font-bold flex items-center shadow-sm ${user.role === UserRole.PROKTOR ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
                                 >
                                    <Upload size={16} className="mr-2"/> Import Data
+                                </button>
+                            )}
+                            {(user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN || user.role === UserRole.PROKTOR) && (
+                                <button 
+                                   onClick={handlePrintCards} 
+                                   className="bg-orange-600 text-white px-3 py-2 rounded text-sm font-bold flex items-center shadow-sm hover:bg-orange-700"
+                                >
+                                   <Printer size={16} className="mr-2"/> Cetak Kartu
                                 </button>
                             )}
                        </div>
