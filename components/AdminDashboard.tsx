@@ -11,9 +11,9 @@ import {
   Cell
 } from 'recharts';
 import { User, Exam, UserRole, Question, QuestionType, ExamResult, AppSettings } from '../types';
-import { db } from '../services/database'; 
+import { db, supabase } from '../services/database'; 
 import { generateQuestionsWithGemini } from '../services/geminiService';
-import { Plus, BookOpen, Save, LogOut, Loader2, Key, RotateCcw, Clock, Upload, Download, FileText, LayoutDashboard, Settings, Printer, Filter, Calendar, FileSpreadsheet, Lock, Link, Edit, ShieldAlert, Activity, ClipboardList, Search, Unlock, Trash2, Database, School, Shuffle, X, CheckSquare, Map, CalendarDays, Flame, Volume2, AlertTriangle, UserX, Info, Check, Monitor, Users, GraduationCap, CheckCircle, XCircle, ArrowLeft, BarChart3, PieChart, Menu, Trash, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, History, Sparkles, Bot, Eye } from 'lucide-react';
+import { Plus, BookOpen, Save, LogOut, Loader2, Key, RotateCcw, Clock, Upload, Download, FileText, LayoutDashboard, Settings, Printer, Filter, Calendar, FileSpreadsheet, Lock, Link, Edit, ShieldAlert, Activity, ClipboardList, Search, Unlock, Trash2, Database, School, Shuffle, X, CheckSquare, Map, CalendarDays, Flame, Volume2, AlertTriangle, UserX, Info, Check, Monitor, Users, GraduationCap, CheckCircle, XCircle, ArrowLeft, BarChart3, PieChart, Menu, Trash, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, History, Sparkles, Bot, Eye, Wrench, Power, ArrowRight, CheckCircle2, TriangleAlert, ShieldCheck } from 'lucide-react';
 import ReactQuill, { Quill } from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 import katex from 'katex';
@@ -167,7 +167,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
   const [isProcessingImport, setIsProcessingImport] = useState(false);
   
   // TABS
-  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'MONITORING' | 'HASIL_UJIAN' | 'BANK_SOAL' | 'MAPPING' | 'PESERTA' | 'CETAK_KARTU' | 'ANTI_CHEAT' | 'STAFF'>('DASHBOARD');
+  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'MONITORING' | 'HASIL_UJIAN' | 'BANK_SOAL' | 'MAPPING' | 'PESERTA' | 'CETAK_KARTU' | 'ANTI_CHEAT' | 'STAFF' | 'TROUBLESHOOTING'>('DASHBOARD');
   
   // STAFF STATE
   const [staffList, setStaffList] = useState<User[]>([]);
@@ -289,6 +289,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
 
   const [monitoringSearch, setMonitoringSearch] = useState<string>('');
   const [printDate, setPrintDate] = useState(localTodayStr); // YYYY-MM-DD
+  const [cardModel, setCardModel] = useState<'MODEL_1' | 'MODEL_2'>('MODEL_1');
   
   // GRAPH FILTERS
   const [graphFilterMode, setGraphFilterMode] = useState<'SCHEDULED' | 'ALL'>('SCHEDULED');
@@ -746,6 +747,65 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
     }
   };
 
+  const handleForceFinishAll = async () => {
+      showConfirm("Anda yakin ingin memaksa semua peserta yang sedang mengerjakan untuk selesai?", async () => {
+          setIsLoadingData(true);
+          try {
+              await db.forceFinishAllWorking(monitoringExamId || undefined);
+              showToast("Berhasil memaksa selesai semua peserta yang sedang mengerjakan.");
+              await loadData();
+          } catch (e: any) {
+              showToast(e.message || "Gagal memaksa selesai", 'error');
+          }
+          setIsLoadingData(false);
+      });
+  };
+
+  const handleResetAllLogins = async () => {
+      showConfirm("Anda yakin ingin mereset status login SEMUA peserta? Ini akan membuat mereka harus login ulang.", async () => {
+          setIsLoadingData(true);
+          try {
+              const { error } = await supabase.from('students').update({ is_login: false, status: 'idle' }).neq('id', 'admin-id');
+              if (error) throw error;
+              showToast("Status login semua peserta berhasil direset.");
+              await loadData();
+          } catch (e: any) {
+              showToast(e.message || "Gagal mereset status login", 'error');
+          }
+          setIsLoadingData(false);
+      });
+  };
+
+  const handleResetAllViolations = async () => {
+      showConfirm("Anda yakin ingin mereset SEMUA pelanggaran peserta?", async () => {
+          setIsLoadingData(true);
+          try {
+              const { error } = await supabase.from('results').update({ violation_count: 0 });
+              if (error) throw error;
+              showToast("Semua pelanggaran berhasil direset.");
+              await loadData();
+          } catch (e: any) {
+              showToast(e.message || "Gagal mereset pelanggaran", 'error');
+          }
+          setIsLoadingData(false);
+      });
+  };
+
+  const handleUnblockAll = async () => {
+      showConfirm("Anda yakin ingin membuka blokir SEMUA peserta?", async () => {
+          setIsLoadingData(true);
+          try {
+              const { error } = await supabase.from('students').update({ status: 'idle' }).eq('status', 'blocked');
+              if (error) throw error;
+              showToast("Semua blokir peserta berhasil dibuka.");
+              await loadData();
+          } catch (e: any) {
+              showToast(e.message || "Gagal membuka blokir", 'error');
+          }
+          setIsLoadingData(false);
+      });
+  };
+
   const handleGenerateNewToken = async (examId: string) => {
     if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) {
         showToast("Hanya Admin yang dapat mengubah token!", "error");
@@ -991,6 +1051,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
     } finally {
         setIsGeneratingAi(false);
     }
+  };
+
+  const handleUpdateDuration = async (newDuration: number) => {
+      if (!viewingQuestionsExam) return;
+      try {
+          const updatedExam = { ...viewingQuestionsExam, durationMinutes: newDuration };
+          await db.updateExamMapping(
+              viewingQuestionsExam.id,
+              viewingQuestionsExam.token,
+              newDuration,
+              viewingQuestionsExam.examDate || '',
+              viewingQuestionsExam.session || '',
+              viewingQuestionsExam.schoolAccess || [],
+              viewingQuestionsExam.shuffleQuestions,
+              viewingQuestionsExam.shuffleOptions
+          );
+          setViewingQuestionsExam(updatedExam);
+          setExams(exams.map(ex => ex.id === updatedExam.id ? updatedExam : ex));
+          showToast("Durasi ujian diperbarui");
+      } catch (e) {
+          showToast("Gagal memperbarui durasi", "error");
+      }
+  };
+
+  const handleUpdateQuestionPoints = async (questionId: string, newPoints: number) => {
+      if (!viewingQuestionsExam) return;
+      try {
+          const questionToUpdate = viewingQuestionsExam.questions.find(q => q.id === questionId);
+          if (!questionToUpdate) return;
+          
+          const updatedQuestion = { ...questionToUpdate, points: newPoints };
+          await db.updateQuestion(updatedQuestion);
+          
+          const updatedQuestions = viewingQuestionsExam.questions.map(q => 
+              q.id === questionId ? updatedQuestion : q
+          );
+          const updatedExam = { ...viewingQuestionsExam, questions: updatedQuestions };
+          setViewingQuestionsExam(updatedExam);
+          setExams(exams.map(ex => ex.id === updatedExam.id ? updatedExam : ex));
+      } catch (e) {
+          showToast("Gagal memperbarui bobot soal", "error");
+      }
   };
 
   const handleToggleShuffle = async (field: 'shuffleQuestions' | 'shuffleOptions', value: boolean) => {
@@ -1658,7 +1760,7 @@ ANS: B`;
   const getStudentStatusInfo = (u: User) => {
       if (u.status === 'blocked') return { color: 'bg-red-600 text-white border-red-700 animate-pulse', label: 'TERKUNCI (MELANGGAR)' };
       if (u.status === 'finished') return { color: 'bg-green-100 text-green-700 border-green-200', label: 'Selesai' };
-      if (u.isLogin) return { color: 'bg-blue-100 text-blue-700 border-blue-200', label: 'Mengerjakan' };
+      if (u.status === 'working') return { color: 'bg-blue-100 text-blue-700 border-blue-200', label: 'Mengerjakan' };
       return { color: 'bg-red-100 text-red-700 border-red-200', label: 'Belum Login' };
   };
   
@@ -1804,8 +1906,8 @@ ANS: B`;
   // --- AGGREGATION FOR "JUMLAH SEKOLAH" DASHBOARD VIEW ---
   const getSchoolStats = (schoolName: string) => {
       const studentsInSchool = users.filter(u => u.school === schoolName);
-      const notLogin = studentsInSchool.filter(u => !u.isLogin && u.status !== 'finished').length;
-      const working = studentsInSchool.filter(u => u.isLogin && u.status !== 'finished').length;
+      const notLogin = studentsInSchool.filter(u => u.status !== 'working' && u.status !== 'finished').length;
+      const working = studentsInSchool.filter(u => u.status === 'working').length;
       const finished = studentsInSchool.filter(u => u.status === 'finished').length;
       
       // Get exam mapping for today
@@ -2105,8 +2207,8 @@ ANS: B`;
                                                 
                                                 const sessionUsers = users.filter(u => u.school === school && u.mappings?.some(m => m.session === session));
                                                 const sTotal = sessionUsers.length;
-                                                const sNotLogin = sessionUsers.filter(u => !u.isLogin && u.status !== 'finished').length;
-                                                const sWorking = sessionUsers.filter(u => u.isLogin && u.status === 'working').length;
+                                                const sNotLogin = sessionUsers.filter(u => u.status !== 'working' && u.status !== 'finished').length;
+                                                const sWorking = sessionUsers.filter(u => u.status === 'working').length;
                                                 const sFinished = sessionUsers.filter(u => u.status === 'finished').length;
 
                                                 sessionTotal += sTotal;
@@ -2322,8 +2424,8 @@ ANS: B`;
         );
         
         const finishedCount = groupUsers.filter(u => u.status === 'finished').length;
-        const workingCount = groupUsers.filter(u => u.isLogin && u.status === 'working').length;
-        const notLoginCount = groupUsers.filter(u => !u.isLogin && u.status !== 'finished').length;
+        const workingCount = groupUsers.filter(u => u.status === 'working').length;
+        const notLoginCount = groupUsers.filter(u => u.status !== 'working' && u.status !== 'finished').length;
         
         return {
             name: `${roomName} - ${sessionName}`,
@@ -2335,204 +2437,144 @@ ANS: B`;
 
     // --- DEFAULT MAIN DASHBOARD VIEW ---
     return (
-        <div className="animate-in fade-in">
-            {/* Top Cards Grid - 1 Col on Mobile, 4 Col on Large */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                {/* Total Mapel */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition border-l-4 border-l-blue-500 group">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Mapel</p>
-                            <h3 className="text-4xl font-bold text-gray-800 mt-2">{exams.length}</h3>
+        <div className="space-y-6 animate-in fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div onClick={() => setDashboardView('STUDENTS_DETAIL')} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition cursor-pointer group">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="bg-blue-50 p-3 rounded-xl group-hover:scale-110 transition-transform">
+                            <Users className="text-blue-600" size={24}/>
                         </div>
-                        <div className="bg-blue-50 p-3 rounded-lg group-hover:scale-110 transition"><BookOpen className="text-blue-500" size={24}/></div>
+                        <ArrowRight className="text-gray-300 group-hover:text-gray-600 transition-colors" size={16}/>
+                    </div>
+                    <div className="space-y-1">
+                        <h3 className="text-3xl font-bold text-gray-800">{users.filter(u => u.status === 'working').length}</h3>
+                        <p className="text-sm font-medium text-gray-500">Peserta Online</p>
+                        <p className="text-[10px] text-gray-400 mt-2">{users.filter(u => u.status === 'working').length} sedang mengerjakan</p>
                     </div>
                 </div>
 
-                {/* Peserta Terdaftar */}
-                <div 
-                    onClick={() => setDashboardView('STUDENTS_DETAIL')}
-                    className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-lg hover:-translate-y-1 transition border-l-4 border-l-green-500 cursor-pointer group"
-                >
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Peserta Terdaftar</p>
-                            <h3 className="text-4xl font-bold text-gray-800 mt-2">{users.length}</h3>
+                <div onClick={() => setDashboardView('EXAMS_DETAIL')} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition cursor-pointer group">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="bg-purple-50 p-3 rounded-xl group-hover:scale-110 transition-transform">
+                            <BookOpen className="text-purple-600" size={24}/>
                         </div>
-                        <div className="bg-green-50 p-3 rounded-lg group-hover:scale-110 transition"><Users className="text-green-500" size={24}/></div>
+                        <ArrowRight className="text-gray-300 group-hover:text-gray-600 transition-colors" size={16}/>
                     </div>
-                    <p className="text-xs text-green-600 mt-4 font-bold flex items-center">Lihat Detail Status <ArrowLeft size={12} className="rotate-180 ml-1"/></p>
+                    <div className="space-y-1">
+                        <h3 className="text-3xl font-bold text-gray-800">{exams.length}</h3>
+                        <p className="text-sm font-medium text-gray-500">Total Mapel</p>
+                        <p className="text-[10px] text-gray-400 mt-2">{exams.reduce((acc, curr) => acc + (curr.questionCount || 0), 0)} total soal tersedia</p>
+                    </div>
                 </div>
 
-                {/* Jumlah Sekolah */}
-                <div 
-                    onClick={() => setDashboardView('SCHOOLS_DETAIL')}
-                    className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-lg hover:-translate-y-1 transition border-l-4 border-l-purple-500 cursor-pointer group"
-                >
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Jumlah Sekolah</p>
-                            <h3 className="text-4xl font-bold text-gray-800 mt-2">{schools.length}</h3>
+                <div onClick={() => setDashboardView('EXAMS_DETAIL')} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition cursor-pointer group">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="bg-green-50 p-3 rounded-xl group-hover:scale-110 transition-transform">
+                            <CheckCircle2 className="text-green-600" size={24}/>
                         </div>
-                        <div className="bg-purple-50 p-3 rounded-lg group-hover:scale-110 transition"><School className="text-purple-500" size={24}/></div>
+                        <ArrowRight className="text-gray-300 group-hover:text-gray-600 transition-colors" size={16}/>
                     </div>
-                    <p className="text-xs text-purple-600 mt-4 font-bold flex items-center">Lihat Mapping & Status <ArrowLeft size={12} className="rotate-180 ml-1"/></p>
+                    <div className="space-y-1">
+                        <h3 className="text-3xl font-bold text-gray-800">{results.length}</h3>
+                        <p className="text-sm font-medium text-gray-500">Ujian Selesai</p>
+                        <p className="text-[10px] text-gray-400 mt-2">Hasil ujian tersimpan</p>
+                    </div>
                 </div>
 
-                {/* Ujian Selesai */}
-                <div 
-                    onClick={() => setDashboardView('EXAMS_DETAIL')}
-                    className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-lg hover:-translate-y-1 transition border-l-4 border-l-orange-500 cursor-pointer group"
-                >
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">Ujian Selesai</p>
-                            <h3 className="text-4xl font-bold text-gray-800 mt-2">{results.length}</h3>
+                <div onClick={() => setActiveTab('MONITORING')} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition cursor-pointer group">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="bg-red-50 p-3 rounded-xl group-hover:scale-110 transition-transform">
+                            <TriangleAlert className="text-red-600" size={24}/>
                         </div>
-                        <div className="bg-orange-50 p-3 rounded-lg group-hover:scale-110 transition"><GraduationCap className="text-orange-500" size={24}/></div>
+                        <ArrowRight className="text-gray-300 group-hover:text-gray-600 transition-colors" size={16}/>
                     </div>
-                    <p className="text-xs text-orange-600 mt-4 font-bold flex items-center">Lihat Rekap Pengerjaan <ArrowLeft size={12} className="rotate-180 ml-1"/></p>
+                    <div className="space-y-1">
+                        <h3 className="text-3xl font-bold text-gray-800">{results.filter(r => r.cheatingAttempts > 0).length}</h3>
+                        <p className="text-sm font-medium text-gray-500">Pelanggaran</p>
+                        <p className="text-[10px] text-gray-400 mt-2">Deteksi kecurangan sistem</p>
+                    </div>
                 </div>
             </div>
 
-            {/* REALTIME BAR CHART SECTION */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in slide-in-from-bottom-4 duration-500 mb-8">
-                {/* FILTER HEADER */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <div className="flex items-center">
-                        <Activity className="mr-2 text-blue-600" size={24}/>
-                        <div>
-                            <h3 className="font-bold text-lg text-gray-800">Grafik Statistik Realtime</h3>
-                            <p className="text-xs text-gray-500">
-                                Pantau progres ujian berdasarkan ruang dan sesi terjadwal. 
-                                {sessionChartData.length > 0 && <span className="ml-2 text-blue-600 font-bold">({sessionChartData.length} Grup Terdeteksi)</span>}
-                            </p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <h3 className="font-bold text-gray-800 mb-6 flex items-center">
+                        <Activity className="mr-2 text-blue-600" size={18}/> Status Sistem
+                    </h3>
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <Database className="text-gray-400" size={16}/>
+                                <span className="text-sm font-medium text-gray-600">Koneksi Database</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                <span className="text-xs font-bold text-green-600">Stabil</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <ShieldCheck className="text-gray-400" size={16}/>
+                                <span className="text-sm font-medium text-gray-600">Anti-Cheat Engine</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                <span className="text-xs font-bold text-green-600">Aktif</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <Monitor className="text-gray-400" size={16}/>
+                                <span className="text-sm font-medium text-gray-600">Server Response</span>
+                            </div>
+                            <span className="text-xs font-bold text-blue-600">24ms</span>
                         </div>
                     </div>
                     
-                    <div className="flex flex-wrap items-center gap-3 bg-gray-50 p-2 rounded-lg border">
-                        {/* Toggle Filter Mode */}
-                        <div className="flex bg-white rounded-md shadow-sm border overflow-hidden">
-                            <button 
-                                onClick={() => setGraphFilterMode('SCHEDULED')}
-                                className={`px-3 py-1.5 text-xs font-bold transition ${graphFilterMode === 'SCHEDULED' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-                            >
-                                Terjadwal
-                            </button>
-                            <button 
-                                onClick={() => setGraphFilterMode('ALL')}
-                                className={`px-3 py-1.5 text-xs font-bold transition ${graphFilterMode === 'ALL' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-                            >
-                                Semua
-                            </button>
-                        </div>
-
-                        {/* Date Filter */}
-                        <div className={`flex items-center bg-white border rounded-md px-2 py-1 shadow-sm transition-opacity ${graphFilterMode === 'ALL' ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-                            <Calendar size={14} className="text-gray-400 mr-2"/>
-                            <input 
-                                type="date" 
-                                className="text-xs font-bold text-gray-700 outline-none"
-                                value={graphDate}
-                                onChange={(e) => setGraphDate(e.target.value)}
-                            />
+                    <div className="mt-8 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                        <div className="flex items-start gap-3">
+                            <Clock className="text-blue-600 mt-0.5" size={18}/>
+                            <div>
+                                <h4 className="text-xs font-bold text-blue-800">Waktu Server</h4>
+                                <p className="text-[10px] text-blue-600 mt-1">{new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                                <p className="text-lg font-mono font-bold text-blue-700 mt-1">{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <div className="w-full h-[400px]">
-                    {sessionChartData.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
-                            <CalendarDays size={48} className="mb-2 opacity-50"/>
-                            <p className="font-bold text-sm">Tidak ada jadwal ujian pada tanggal ini.</p>
-                            <p className="text-xs">Ubah filter tanggal untuk melihat data sesi.</p>
-                        </div>
-                    ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart
-                                data={sessionChartData}
-                                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                                <XAxis 
-                                    dataKey="name" 
-                                    axisLine={false} 
-                                    tickLine={false} 
-                                    tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 600 }}
-                                />
-                                <YAxis 
-                                    axisLine={false} 
-                                    tickLine={false} 
-                                    tick={{ fill: '#6b7280', fontSize: 12 }}
-                                />
-                                <Tooltip 
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                    cursor={{ fill: '#f9fafb' }}
-                                />
-                                <Legend iconType="circle" />
-                                <Bar dataKey="Belum Login" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} barSize={40} />
-                                <Bar dataKey="Mengerjakan" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} barSize={40} />
-                                <Bar dataKey="Selesai" stackId="a" fill="#22c55e" radius={[4, 4, 0, 0]} barSize={40} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    )}
-                </div>
-            </div>
 
-            {/* VIOLATION HISTORY WIDGET (Riwayat Pelanggaran) */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 animate-in slide-in-from-bottom-4 duration-500 delay-100">
-                <div className="flex justify-between items-center mb-4 border-b pb-2">
-                    <h3 className="font-bold text-lg text-gray-800 flex items-center">
-                        <ShieldAlert className="mr-2 text-red-600" size={20}/> Riwayat Pelanggaran Peserta (Realtime)
+                <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <h3 className="font-bold text-gray-800 mb-6 flex items-center">
+                        <Activity className="mr-2 text-purple-600" size={18}/> Aktivitas Terkini
                     </h3>
-                </div>
-                
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-red-50 text-red-900 font-bold border-b border-red-100">
-                            <tr>
-                                <th className="p-3 rounded-tl-lg">Nama Peserta</th>
-                                <th className="p-3">Sekolah</th>
-                                <th className="p-3">Mapel</th>
-                                <th className="p-3 text-center">Jml Pelanggaran</th>
-                                <th className="p-3 rounded-tr-lg text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {results.filter(r => r.cheatingAttempts > 0).length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="p-8 text-center text-gray-400 italic">
-                                        Tidak ada pelanggaran terdeteksi saat ini.
-                                    </td>
-                                </tr>
-                            ) : (
-                                results
-                                .filter(r => r.cheatingAttempts > 0)
-                                .sort((a, b) => b.cheatingAttempts - a.cheatingAttempts)
-                                .map(r => (
-                                    <tr key={r.id} className="hover:bg-red-50/30 transition">
-                                        <td className="p-3 font-bold text-gray-800">{r.studentName}</td>
-                                        <td className="p-3 text-gray-600">{users.find(u => u.id === r.studentId)?.school || '-'}</td>
-                                        <td className="p-3 text-gray-600">{r.examTitle}</td>
-                                        <td className="p-3 text-center">
-                                            <span className="inline-flex items-center justify-center px-3 py-1 bg-red-100 text-red-700 rounded-full font-bold text-xs border border-red-200 shadow-sm animate-pulse">
-                                                {r.cheatingAttempts}x
-                                            </span>
-                                        </td>
-                                        <td className="p-3 text-center">
-                                            <button 
-                                                onClick={() => handleResetViolation(r.id)}
-                                                className="bg-white border border-gray-300 text-gray-600 hover:text-blue-600 hover:border-blue-400 px-3 py-1 rounded text-xs font-bold flex items-center justify-center mx-auto transition shadow-sm"
-                                                title="Reset Status Pelanggaran"
-                                            >
-                                                <RotateCcw size={12} className="mr-1"/> Reset
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                    <div className="space-y-4">
+                        {results.length === 0 ? (
+                            <div className="text-center text-gray-400 italic p-8">Belum ada aktivitas ujian.</div>
+                        ) : (
+                            results.slice(0, 5).map(r => (
+                                <div key={r.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-xl transition border border-transparent hover:border-gray-100">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                                            {(r.studentName || 'NN').substring(0, 2).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-gray-800">{r.studentName || 'Peserta'}</h4>
+                                            <p className="text-[10px] text-gray-400">Menyelesaikan {r.examTitle || 'Ujian'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-sm font-bold text-green-600">{r.score}</span>
+                                        <p className="text-[10px] text-gray-400">{new Date(r.submittedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                    {results.length > 0 && (
+                        <button onClick={() => setActiveTab('HASIL_UJIAN')} className="w-full mt-6 py-3 text-sm font-bold text-purple-600 hover:bg-purple-50 rounded-xl transition border border-dashed border-purple-200">
+                            Lihat Semua Hasil
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
@@ -2613,6 +2655,7 @@ ANS: B`;
                   <>
                       <div className="my-2 border-t border-white/10"></div>
                       <NavItem id="ANTI_CHEAT" label="Sistem Anti-Curang" icon={ShieldAlert} />
+                      <NavItem id="TROUBLESHOOTING" label="Troubleshooting" icon={Wrench} />
                   </>
               )}
           </nav>
@@ -2714,6 +2757,12 @@ ANS: B`;
                                    <option value="ALL">Semua Sesi</option>
                                    {sessions.map(s => <option key={s} value={s}>{s}</option>)}
                                </select>
+                               <button 
+                                   onClick={handleForceFinishAll}
+                                   className="bg-red-600 text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-red-700 transition shadow-sm flex items-center"
+                               >
+                                   <Power size={14} className="mr-1"/> Paksa Selesai Semua
+                               </button>
                            </div>
                        </div>
                        {selectedStudentIds.length > 0 && (
@@ -2830,7 +2879,17 @@ ANS: B`;
                                   <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-bold">{viewingQuestionsExam.questions.length} Soal</span>
                                   <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold">Total Skor: {viewingQuestionsExam.questions.reduce((sum, q) => sum + (q.points || 0), 0)}</span>
                               </div>
-                              <div className="flex gap-4">
+                              <div className="flex flex-wrap gap-4 items-center">
+                                  <div className="flex items-center gap-2">
+                                      <label className="text-xs font-bold text-gray-600">Durasi (Menit):</label>
+                                      <input 
+                                          type="number" 
+                                          min="1"
+                                          className="border rounded p-1 w-16 text-xs text-center"
+                                          value={viewingQuestionsExam.durationMinutes}
+                                          onChange={(e) => handleUpdateDuration(Number(e.target.value))}
+                                      />
+                                  </div>
                                   <label className="flex items-center gap-2 text-xs font-bold text-gray-600 cursor-pointer hover:text-blue-600 transition">
                                       <input 
                                           type="checkbox" 
@@ -2852,7 +2911,18 @@ ANS: B`;
                               </div>
                           </h4>
                           <div className="flex flex-wrap gap-2 mb-6 bg-gray-50 p-4 rounded-lg border">
-                               <button onClick={() => {setTargetExamForAdd(viewingQuestionsExam); setIsAddQuestionModalOpen(true);}} className="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold flex items-center hover:bg-green-700 transition"><Plus size={16} className="mr-2"/> Input Manual</button>
+                               <button onClick={() => {
+                                   setTargetExamForAdd(viewingQuestionsExam); 
+                                   setEditingQuestionId(null);
+                                   setNqText('');
+                                   setNqImg('');
+                                   setNqOptions(['', '', '', '']);
+                                   setNqCorrectIndex(0);
+                                   setNqCorrectIndices([]);
+                                   setNqMatchingPairs([{left: '', right: ''}]);
+                                   setNqPoints(10);
+                                   setIsAddQuestionModalOpen(true);
+                               }} className="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold flex items-center hover:bg-green-700 transition"><Plus size={16} className="mr-2"/> Input Manual</button>
                                <button onClick={() => setIsAiModalOpen(true)} className="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold flex items-center hover:bg-purple-700 transition shadow-sm"><Sparkles size={16} className="mr-2"/> Generate AI</button>
                                <div className="h-8 w-px bg-gray-300 mx-2"></div>
                                <button onClick={() => { setImportTargetExamId(viewingQuestionsExam.id); setIsImportModalOpen(true); }} className="bg-orange-500 text-white px-4 py-2 rounded text-sm font-bold flex items-center hover:bg-orange-600 transition"><Upload size={16} className="mr-2"/> Import Soal</button>
@@ -2866,7 +2936,16 @@ ANS: B`;
                                           <div className="flex items-center gap-2 mb-3">
                                               <span className="font-bold bg-gray-200 w-8 h-8 flex items-center justify-center rounded-full text-sm">{i+1}</span>
                                               <span className="text-xs font-bold px-2 py-0.5 bg-blue-100 text-blue-700 rounded">{q.type}</span>
-                                              <span className="text-xs font-bold px-2 py-0.5 bg-orange-100 text-orange-700 rounded">Bobot: {q.points}</span>
+                                              <div className="flex items-center gap-1 bg-orange-100 text-orange-700 rounded px-2 py-0.5">
+                                                  <span className="text-xs font-bold">Bobot:</span>
+                                                  <input 
+                                                      type="number" 
+                                                      min="0"
+                                                      className="w-12 text-xs font-bold bg-transparent border-b border-orange-300 focus:outline-none focus:border-orange-500 text-center" 
+                                                      value={q.points} 
+                                                      onChange={(e) => handleUpdateQuestionPoints(q.id, Number(e.target.value))}
+                                                  />
+                                              </div>
                                           </div>
                                           
                                           <div className="mb-4 overflow-hidden bg-white rounded-lg border border-gray-100">
@@ -3864,6 +3943,13 @@ ANS: B`;
                               </select>
                           </div>
                           <div>
+                              <label className="block text-xs font-bold text-gray-500 mb-1">Model Kartu</label>
+                              <select className="border rounded p-1.5 text-sm w-48" value={cardModel} onChange={e => setCardModel(e.target.value as any)}>
+                                  <option value="MODEL_1">Model 1 (Standar)</option>
+                                  <option value="MODEL_2">Model 2 (Minimalis)</option>
+                              </select>
+                          </div>
+                          <div>
                               <label className="block text-xs font-bold text-gray-500 mb-1">Tanggal Cetak</label>
                               <input type="date" className="border rounded p-1.5 text-sm" value={printDate} onChange={e => setPrintDate(e.target.value)}/>
                           </div>
@@ -3885,73 +3971,122 @@ ANS: B`;
                                 </div>
                                 
                                 <div className="z-10 flex w-full h-full relative">
-                                    {/* Left Column: Logo & Photo & Signature */}
-                                    <div className="w-[30%] border-r-2 border-dashed border-gray-400 flex flex-col items-center justify-between p-2 text-center bg-gray-50/30">
-                                        <div className="mt-1">
-                                            <img src={FIXED_LOGO_URL} className="w-10 h-10 object-contain mix-blend-multiply" alt="Logo"/>
-                                        </div>
-                                        
-                                        <div className="w-full flex-1 flex flex-col items-center justify-center my-1">
-                                            <div className="w-[20mm] h-[25mm] border border-gray-400 bg-white flex items-center justify-center shadow-inner">
-                                                <span className="text-[8px] text-gray-300 font-bold transform -rotate-12 whitespace-nowrap">FOTO 3x4</span>
-                                            </div>
-                                        </div>
+                                    {cardModel === 'MODEL_1' ? (
+                                        <>
+                                            {/* Left Column: Logo & Photo & Signature */}
+                                            <div className="w-[30%] border-r-2 border-dashed border-gray-400 flex flex-col items-center justify-between p-2 text-center bg-gray-50/30">
+                                                <div className="mt-1">
+                                                    <img src={FIXED_LOGO_URL} className="w-10 h-10 object-contain mix-blend-multiply" alt="Logo"/>
+                                                </div>
+                                                
+                                                <div className="w-full flex-1 flex flex-col items-center justify-center my-1">
+                                                    <div className="w-[20mm] h-[25mm] border border-gray-400 bg-white flex items-center justify-center shadow-inner">
+                                                        <span className="text-[8px] text-gray-300 font-bold transform -rotate-12 whitespace-nowrap">FOTO 3x4</span>
+                                                    </div>
+                                                </div>
 
-                                        <div className="mb-1 w-full border-t border-gray-400 pt-1">
-                                            <div className="h-4"></div> {/* Space for signature */}
-                                            <p className="text-[7px] font-bold text-gray-500 uppercase">Tanda Tangan</p>
-                                        </div>
-                                    </div>
+                                                <div className="mb-1 w-full border-t border-gray-400 pt-1">
+                                                    <div className="h-4"></div> {/* Space for signature */}
+                                                    <p className="text-[7px] font-bold text-gray-500 uppercase">Tanda Tangan</p>
+                                                </div>
+                                            </div>
 
-                                    {/* Right Column: Details */}
-                                    <div className="flex-1 p-2 flex flex-col justify-between">
-                                        {/* Header */}
-                                        <div className="border-b-2 border-gray-800 pb-1 mb-1">
-                                            <h2 className="font-black text-sm text-gray-900 leading-none mb-0.5 uppercase">KARTU PESERTA</h2>
-                                            <p className="text-[8px] font-bold text-gray-600 tracking-widest uppercase">{appName || 'ONLINE BASED TEST'}</p>
-                                        </div>
+                                            {/* Right Column: Details */}
+                                            <div className="flex-1 p-2 flex flex-col justify-between">
+                                                {/* Header */}
+                                                <div className="border-b-2 border-gray-800 pb-1 mb-1">
+                                                    <h2 className="font-black text-sm text-gray-900 leading-none mb-0.5 uppercase">KARTU PESERTA</h2>
+                                                    <p className="text-[8px] font-bold text-gray-600 tracking-widest uppercase">{appName || 'ONLINE BASED TEST'}</p>
+                                                </div>
 
-                                        {/* Info Table */}
-                                        <div className="flex-1 space-y-0.5 text-[9px] text-gray-900 font-medium mt-0.5">
-                                            <div className="flex items-start">
-                                                <span className="w-14 font-bold text-gray-500">NAMA</span>
-                                                <span className="font-bold uppercase flex-1 leading-tight truncate">: {u.name}</span>
-                                            </div>
-                                            <div className="flex items-center">
-                                                <span className="w-14 font-bold text-gray-500">Nomor Peserta</span>
-                                                <span className="font-mono font-bold">: {u.nomorPeserta || u.username}</span>
-                                            </div>
-                                            <div className="flex items-center">
-                                                <span className="w-14 font-bold text-gray-500">KELAS</span>
-                                                <span className="font-bold">: {u.class || '-'}</span>
-                                            </div>
-                                            <div className="flex items-center">
-                                                <span className="w-14 font-bold text-gray-500">PASS</span>
-                                                <span className="font-mono font-bold bg-gray-100 px-1 border border-gray-200 rounded">: {u.password}</span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <span className="w-14 font-bold text-gray-500">SEKOLAH</span>
-                                                <span className="flex-1 truncate leading-tight">: {u.school || '-'}</span>
-                                            </div>
-                                            <div className="flex items-center">
-                                                <span className="w-14 font-bold text-gray-500">SESI</span>
-                                                <span>: {u.mappings?.[0]?.session ? `${u.mappings[0].session.replace('Sesi ', '')} (${sessionTimes[u.mappings[0].session] || '-'})` : '-'}</span>
-                                            </div>
-                                        </div>
+                                                {/* Info Table */}
+                                                <div className="flex-1 space-y-0.5 text-[9px] text-gray-900 font-medium mt-0.5">
+                                                    <div className="flex items-start">
+                                                        <span className="w-14 font-bold text-gray-500">NAMA</span>
+                                                        <span className="font-bold uppercase flex-1 leading-tight truncate">: {u.name}</span>
+                                                    </div>
+                                                    <div className="flex items-center">
+                                                        <span className="w-14 font-bold text-gray-500">Nomor Peserta</span>
+                                                        <span className="font-mono font-bold">: {u.nomorPeserta || u.username}</span>
+                                                    </div>
+                                                    <div className="flex items-center">
+                                                        <span className="w-14 font-bold text-gray-500">KELAS</span>
+                                                        <span className="font-bold">: {u.class || '-'}</span>
+                                                    </div>
+                                                    <div className="flex items-center">
+                                                        <span className="w-14 font-bold text-gray-500">PASS</span>
+                                                        <span className="font-mono font-bold bg-gray-100 px-1 border border-gray-200 rounded">: {u.password}</span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="w-14 font-bold text-gray-500">SEKOLAH</span>
+                                                        <span className="flex-1 truncate leading-tight">: {u.school || '-'}</span>
+                                                    </div>
+                                                    <div className="flex items-center">
+                                                        <span className="w-14 font-bold text-gray-500">SESI</span>
+                                                        <span>: {u.mappings?.[0]?.session ? `${u.mappings[0].session.replace('Sesi ', '')} (${sessionTimes[u.mappings[0].session] || '-'})` : '-'}</span>
+                                                    </div>
+                                                </div>
 
-                                        {/* Footer */}
-                                        <div className="mt-1 pt-1 border-t border-gray-200 flex justify-between items-end">
-                                            <div className="text-[7px] text-gray-400 italic max-w-[100px] leading-tight">
-                                                *Bawa kartu saat ujian.
+                                                {/* Footer */}
+                                                <div className="mt-1 pt-1 border-t border-gray-200 flex justify-between items-end">
+                                                    <div className="text-[7px] text-gray-400 italic max-w-[100px] leading-tight">
+                                                        *Bawa kartu saat ujian.
+                                                    </div>
+                                                    <div className="text-center min-w-[80px]">
+                                                        <p className="text-[7px] text-gray-600 mb-2 leading-none">
+                                                            Pasuruan, {new Date(printDate).toLocaleDateString('id-ID', { month: 'short', year: 'numeric', day: 'numeric' })}
+                                                        </p>
+                                                        <p className="text-[7px] font-bold underline">Panitia Pelaksana</p>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="text-center min-w-[80px]">
-                                                <p className="text-[7px] text-gray-600 mb-2 leading-none">
-                                                    Pasuruan, {new Date(printDate).toLocaleDateString('id-ID', { month: 'short', year: 'numeric', day: 'numeric' })}
-                                                </p>
-                                                <p className="text-[7px] font-bold underline">Panitia Pelaksana</p>
+                                        </>
+                                    ) : (
+                                        <div className="flex flex-col w-full h-full border-2 border-blue-800 bg-white">
+                                            <div className="bg-blue-800 text-white p-2 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <img src={FIXED_LOGO_URL} className="w-6 h-6 object-contain bg-white rounded-full p-0.5" alt="Logo"/>
+                                                    <div>
+                                                        <h2 className="font-black text-[10px] leading-none uppercase">KARTU PESERTA</h2>
+                                                        <p className="text-[6px] tracking-widest uppercase opacity-80">{appName || 'ONLINE BASED TEST'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 p-2 flex gap-2">
+                                                <div className="flex-1 space-y-1 text-[9px] text-gray-900 font-medium">
+                                                    <div className="flex items-start">
+                                                        <span className="w-16 font-bold text-gray-600">NAMA</span>
+                                                        <span className="font-bold uppercase flex-1 leading-tight truncate">: {u.name}</span>
+                                                    </div>
+                                                    <div className="flex items-center">
+                                                        <span className="w-16 font-bold text-gray-600">NO. PESERTA</span>
+                                                        <span className="font-mono font-bold">: {u.nomorPeserta || u.username}</span>
+                                                    </div>
+                                                    <div className="flex items-center">
+                                                        <span className="w-16 font-bold text-gray-600">PASSWORD</span>
+                                                        <span className="font-mono font-bold bg-gray-100 px-1 border border-gray-200 rounded">: {u.password}</span>
+                                                    </div>
+                                                    <div className="flex items-center">
+                                                        <span className="w-16 font-bold text-gray-600">KELAS/SESI</span>
+                                                        <span className="font-bold">: {u.class || '-'} / {u.mappings?.[0]?.session ? u.mappings[0].session.replace('Sesi ', '') : '-'}</span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="w-16 font-bold text-gray-600">SEKOLAH</span>
+                                                        <span className="flex-1 truncate leading-tight">: {u.school || '-'}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="w-[20mm] flex flex-col items-center justify-between">
+                                                    <div className="w-[20mm] h-[25mm] border border-gray-400 bg-gray-50 flex items-center justify-center shadow-inner">
+                                                        <span className="text-[8px] text-gray-400 font-bold transform -rotate-12 whitespace-nowrap">FOTO</span>
+                                                    </div>
+                                                    <div className="w-full text-center mt-1">
+                                                        <p className="text-[6px] text-gray-600 leading-none mb-3">Panitia</p>
+                                                        <div className="border-b border-gray-400 w-full"></div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -4115,6 +4250,59 @@ ANS: B`;
               </div>
           )}
 
+          {/* TROUBLESHOOTING PANEL */}
+          {activeTab === 'TROUBLESHOOTING' && (
+              <div className="space-y-6 animate-in fade-in print:hidden">
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="font-bold text-lg flex items-center"><Wrench size={24} className="mr-2 text-gray-600"/> Troubleshooting</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="bg-white rounded-xl shadow-sm border p-6 flex flex-col items-center text-center hover:shadow-md transition">
+                          <div className="bg-orange-100 p-4 rounded-full mb-4">
+                              <LogOut size={32} className="text-orange-600" />
+                          </div>
+                          <h4 className="font-bold text-gray-800 mb-2">Reset Status Login</h4>
+                          <p className="text-sm text-gray-500 mb-6">Memaksa semua peserta keluar (logout). Berguna jika ada peserta yang nyangkut status loginnya.</p>
+                          <button 
+                              onClick={handleResetAllLogins}
+                              className="mt-auto w-full bg-orange-500 text-white py-2 rounded-lg font-bold hover:bg-orange-600 transition shadow-sm"
+                          >
+                              Reset Semua Login
+                          </button>
+                      </div>
+
+                      <div className="bg-white rounded-xl shadow-sm border p-6 flex flex-col items-center text-center hover:shadow-md transition">
+                          <div className="bg-green-100 p-4 rounded-full mb-4">
+                              <ShieldAlert size={32} className="text-green-600" />
+                          </div>
+                          <h4 className="font-bold text-gray-800 mb-2">Reset Pelanggaran</h4>
+                          <p className="text-sm text-gray-500 mb-6">Mengembalikan jumlah pelanggaran (kecurangan) semua peserta menjadi 0.</p>
+                          <button 
+                              onClick={handleResetAllViolations}
+                              className="mt-auto w-full bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 transition shadow-sm"
+                          >
+                              Reset Semua Pelanggaran
+                          </button>
+                      </div>
+
+                      <div className="bg-white rounded-xl shadow-sm border p-6 flex flex-col items-center text-center hover:shadow-md transition">
+                          <div className="bg-blue-100 p-4 rounded-full mb-4">
+                              <Unlock size={32} className="text-blue-600" />
+                          </div>
+                          <h4 className="font-bold text-gray-800 mb-2">Buka Blokir Massal</h4>
+                          <p className="text-sm text-gray-500 mb-6">Membuka blokir untuk semua peserta yang akunnya terkunci akibat pelanggaran.</p>
+                          <button 
+                              onClick={handleUnblockAll}
+                              className="mt-auto w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 transition shadow-sm"
+                          >
+                              Buka Semua Blokir
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          )}
+
           {/* MANAJEMEN STAFF & RUANG */}
           {activeTab === 'STAFF' && (
               <div className="space-y-6 animate-in fade-in print:hidden">
@@ -4144,7 +4332,7 @@ ANS: B`;
                           <h3 className="font-bold text-lg flex items-center"><Database size={20} className="mr-2 text-blue-600"/> Manajemen Ruang & Proktor</h3>
                       </div>
 
-                      <div className="bg-gray-50 p-4 rounded-xl border mb-6">
+                      <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6 shadow-sm">
                           <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center">
                               <Plus size={16} className="mr-2"/> Tambah Ruang Baru
                           </h4>
@@ -4152,7 +4340,7 @@ ANS: B`;
                               <div className="w-full md:w-72">
                                   <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nama Sekolah</label>
                                   <select 
-                                      className="w-full border rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none" 
+                                      className="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none" 
                                       value={newRoomSchool} 
                                       onChange={e => setNewRoomSchool(e.target.value)}
                                   >
@@ -4164,7 +4352,7 @@ ANS: B`;
                                   <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nama Ruang</label>
                                   <input 
                                       placeholder="Contoh: Ruang 01, LAB KOMPUTER" 
-                                      className="w-full border rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none" 
+                                      className="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none" 
                                       value={newRoomName} 
                                       onChange={e => setNewRoomName(e.target.value)} 
                                   />
@@ -4181,7 +4369,7 @@ ANS: B`;
                           <p className="text-[10px] text-gray-400 mt-2 font-medium italic">* Akun proktor akan digenerate otomatis dengan format NPSN-001.</p>
                       </div>
 
-                      <div className="overflow-x-auto border rounded-xl bg-white">
+                      <div className="overflow-x-auto border rounded-xl bg-white shadow-sm">
                           <table className="w-full text-sm text-left">
                               <thead className="bg-gray-50 font-bold border-b text-gray-600">
                                   <tr>
@@ -4458,6 +4646,7 @@ ANS: B`;
                           setNqCorrectIndex(0);
                           setNqCorrectIndices([]);
                           setNqMatchingPairs([{left: '', right: ''}]);
+                          setNqPoints(10);
                       }} className="text-gray-400 hover:text-gray-600 transition"><X/></button>
                   </div>
                   
@@ -4640,7 +4829,17 @@ ANS: B`;
                   </div>
 
                   <div className="pt-4 border-t mt-4 flex justify-end gap-3 flex-shrink-0">
-                      <button onClick={() => setIsAddQuestionModalOpen(false)} className="px-6 py-2 border rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 transition">Batal</button>
+                      <button onClick={() => {
+                          setIsAddQuestionModalOpen(false);
+                          setEditingQuestionId(null);
+                          setNqText('');
+                          setNqImg('');
+                          setNqOptions(['', '', '', '']);
+                          setNqCorrectIndex(0);
+                          setNqCorrectIndices([]);
+                          setNqMatchingPairs([{left: '', right: ''}]);
+                          setNqPoints(10);
+                      }} className="px-6 py-2 border rounded-xl font-bold text-sm text-gray-600 hover:bg-gray-50 transition">Batal</button>
                       <button onClick={handleSaveQuestion} className="px-10 py-2 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg hover:bg-green-700 transition transform active:scale-95 flex items-center">
                           <Save size={16} className="mr-2"/> Simpan Soal
                       </button>

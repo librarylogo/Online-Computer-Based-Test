@@ -141,7 +141,14 @@ const App: React.FC = () => {
             
             // Check if scheduled via specific student mapping for today
             const examMappings = user.mappings?.filter(m => m.examId === e.id) || [];
-            if (examMappings.some(m => (m.examDate || '').trim() === todayStr)) return true;
+            if (examMappings.some(m => {
+                const mapDate = (m.examDate || '').trim();
+                if (mapDate.includes('|')) {
+                    const [start, end] = mapDate.split('|');
+                    return todayStr >= start && todayStr <= end;
+                }
+                return mapDate === todayStr;
+            })) return true;
             
             return false;
           });
@@ -409,17 +416,27 @@ const App: React.FC = () => {
                           <div className="border rounded-xl overflow-hidden bg-gray-50 text-left max-h-60 overflow-y-auto custom-scrollbar">
                                {blockedSchedule
                                  .sort((a,b) => (a.examDate || '').localeCompare(b.examDate || ''))
-                                 .map((ex, idx) => (
-                                   <div key={ex.id} className="p-4 border-b last:border-0 flex justify-between items-center bg-white hover:bg-blue-50 transition">
-                                       <div>
-                                           <h4 className="font-bold text-gray-800 text-sm">{ex.title}</h4>
-                                           <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded border">{ex.examDate || 'Belum diatur'}</span>
-                                                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded border border-blue-200 font-bold">{ex.session || 'Sesi 1'}</span>
+                                 .map((ex, idx) => {
+                                     const mapping = currentUser?.mappings?.find(m => m.examId === ex.id);
+                                     let displayDate = mapping?.examDate || ex.examDate || 'Belum diatur';
+                                     if (displayDate.includes('|')) {
+                                         const [start, end] = displayDate.split('|');
+                                         displayDate = `${start} s/d ${end}`;
+                                     }
+                                     const displaySession = mapping?.session || ex.session || 'Sesi 1';
+                                     
+                                     return (
+                                       <div key={ex.id} className="p-4 border-b last:border-0 flex justify-between items-center bg-white hover:bg-blue-50 transition">
+                                           <div>
+                                               <h4 className="font-bold text-gray-800 text-sm">{ex.title}</h4>
+                                               <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded border">{displayDate}</span>
+                                                    <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded border border-blue-200 font-bold">{displaySession}</span>
+                                               </div>
                                            </div>
                                        </div>
-                                   </div>
-                               ))}
+                                     );
+                                 })}
                           </div>
                       ) : (
                           <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 text-sm font-bold">

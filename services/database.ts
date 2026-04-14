@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+export { supabase };
 import { User, Exam, ExamResult, AppSettings, Question, UserRole, QuestionType } from '../types';
 
 // Hardcoded Settings (Since app_settings table is removed in new schema)
@@ -898,6 +899,38 @@ export const db = {
         }
       )
       .subscribe();
+  },
+
+  forceFinishAllWorking: async (examId?: string): Promise<void> => {
+    // 1. Find all students currently 'working'
+    let query = supabase.from('results').select('siswa_id, id').eq('status', 'working');
+    if (examId) {
+        query = query.eq('exam_id', examId);
+    }
+    
+    const { data: workingResults, error: fetchError } = await query;
+    if (fetchError) throw fetchError;
+    
+    if (!workingResults || workingResults.length === 0) return;
+
+    const studentIds = workingResults.map(r => r.siswa_id);
+    const resultIds = workingResults.map(r => r.id);
+
+    // 2. Update their status in the students table to trigger the real-time subscription
+    const { error: studentError } = await supabase
+        .from('students')
+        .update({ status: 'finished' })
+        .in('id', studentIds);
+        
+    if (studentError) throw studentError;
+
+    // 3. Update their status in the results table
+    const { error: resultError } = await supabase
+        .from('results')
+        .update({ status: 'finished', finish_time: new Date().toISOString() })
+        .in('id', resultIds);
+        
+    if (resultError) throw resultError;
   },
 
   reportViolation: async (userId: string, examId: string, violationCount: number): Promise<void> => {

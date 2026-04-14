@@ -436,13 +436,24 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
       return () => clearInterval(interval);
   }, [isFrozen, freezeTimeLeft]);
 
-  // Listen for Admin Unlock (Remote Unlock)
+  const handleFinalSubmitRef = useRef<any>(null);
+
+  useEffect(() => {
+      handleFinalSubmitRef.current = handleFinalSubmit;
+  });
+
+  // Listen for Admin Unlock (Remote Unlock) and Force Finish
   useEffect(() => {
       const channel = db.subscribeToStudentStatus(user.id, (status) => {
           if (status === 'idle' || status === 'working') {
               if (isFrozen) {
                   setIsFrozen(false);
                   setFreezeTimeLeft(0);
+              }
+          } else if (status === 'finished') {
+              // Admin forced finish
+              if (handleFinalSubmitRef.current) {
+                  handleFinalSubmitRef.current();
               }
           }
       });
