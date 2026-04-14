@@ -41,6 +41,10 @@ export const db = {
 
       if (data && data.school_access) {
         const parsed = typeof data.school_access === 'string' ? JSON.parse(data.school_access) : data.school_access;
+        // Force update old logo to new logo
+        if (parsed.schoolLogoUrl === 'https://lh3.googleusercontent.com/d/1OtRkYlUrTr89sYj1Wj1hwTO7NjWXoLPf?authuser=0' || parsed.schoolLogoUrl === 'https://lh3.googleusercontent.com/d/1UXDrhKgeSjfFks_oXIMOVYgxFG_Bh1nm') {
+            parsed.schoolLogoUrl = 'https://lh3.googleusercontent.com/d/1tQPCSlVqJv08xNKeZRZhtRKC8T8PF-Uj';
+        }
         // Merge with defaults to ensure all fields exist
         return { ...DEFAULT_SETTINGS, ...parsed };
       }
@@ -52,7 +56,11 @@ export const db = {
     const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
     if (saved) {
       try {
-        return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        if (parsed.schoolLogoUrl === 'https://lh3.googleusercontent.com/d/1OtRkYlUrTr89sYj1Wj1hwTO7NjWXoLPf?authuser=0' || parsed.schoolLogoUrl === 'https://lh3.googleusercontent.com/d/1UXDrhKgeSjfFks_oXIMOVYgxFG_Bh1nm') {
+            parsed.schoolLogoUrl = 'https://lh3.googleusercontent.com/d/1tQPCSlVqJv08xNKeZRZhtRKC8T8PF-Uj';
+        }
+        return { ...DEFAULT_SETTINGS, ...parsed };
       } catch (e) {
         console.error("Error parsing saved settings", e);
       }

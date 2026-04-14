@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Exam, AppSettings } from '../types';
 import { db } from '../services/database'; 
-import { UserCircle, RefreshCcw, Lock, CheckCircle, Play, Clock } from 'lucide-react';
+import { UserCircle, RefreshCcw, Lock, CheckCircle, Play, Clock, Calendar } from 'lucide-react';
 import { BackgroundShapes } from './BackgroundShapes';
 
 interface StudentFlowProps {
@@ -251,9 +251,22 @@ export const StudentFlow: React.FC<StudentFlowProps> = ({ user, onStartExam, onL
 
                                  {(() => {
                                      const mapping = user.mappings?.find(m => m.examId === exam.id);
+                                     const isTryOut = mapping?.examDate?.includes('|');
+                                     
+                                     if (isTryOut && mapping && mapping.examDate) {
+                                         const [start, end] = mapping.examDate.split('|');
+                                         return (
+                                             <div className="mb-6 flex flex-col items-center">
+                                                 <div className="text-[10px] font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100 flex items-center shadow-sm">
+                                                     <Calendar size={10} className="mr-1"/> Selesai: {end}
+                                                 </div>
+                                             </div>
+                                         );
+                                     }
+
                                      const sessionName = mapping?.session || exam.session || '';
                                      const timeRange = settings.sessionTimes?.[sessionName];
-                                     if (!sessionName) return null;
+                                     if (!sessionName || sessionName === '-') return null;
                                      return (
                                          <div className="mb-6 flex flex-col items-center">
                                              <div className="text-[10px] font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 flex items-center shadow-sm">

@@ -660,6 +660,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
       const printWindow = window.open('', '_blank');
       if (!printWindow) return;
 
+      const now = new Date();
+      const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      const printDateStr = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}.${now.getMinutes().toString().padStart(2, '0')} WIB`;
+
       let content = `
       <!DOCTYPE html>
       <html>
@@ -674,106 +679,83 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
               }
               .page {
                   display: grid;
-                  grid-template-columns: repeat(2, 1fr);
-                  gap: 20px;
+                  grid-template-columns: repeat(3, 1fr);
+                  gap: 15px;
                   page-break-after: always;
               }
               .card {
                   background: white;
-                  border: 2px solid #000;
-                  border-radius: 8px;
+                  border: 1px dashed #999;
                   padding: 15px;
                   width: 100%;
                   box-sizing: border-box;
-                  position: relative;
-                  overflow: hidden;
-              }
-              .card::before {
-                  content: "";
-                  position: absolute;
-                  top: 0; left: 0; right: 0;
-                  height: 80px;
-                  background: ${themeColor}20;
-                  z-index: 0;
-              }
-              .header {
-                  display: flex;
-                  align-items: center;
-                  border-bottom: 2px solid #000;
-                  padding-bottom: 10px;
-                  margin-bottom: 15px;
-                  position: relative;
-                  z-index: 1;
+                  text-align: center;
               }
               .logo {
-                  width: 60px;
-                  height: 60px;
+                  height: 40px;
                   object-fit: contain;
-                  margin-right: 15px;
+                  margin-bottom: 5px;
               }
-              .title-container {
-                  flex: 1;
-                  text-align: center;
-              }
-              .title-container h2 {
-                  margin: 0;
-                  font-size: 16px;
+              .app-name {
+                  font-size: 12px;
                   font-weight: bold;
                   text-transform: uppercase;
+                  margin: 0 0 5px 0;
               }
-              .title-container h3 {
-                  margin: 5px 0 0 0;
-                  font-size: 14px;
-                  font-weight: normal;
+              .black-bar {
+                  background: black;
+                  color: white;
+                  font-size: 10px;
+                  font-weight: bold;
+                  padding: 4px 0;
+                  margin-bottom: 10px;
+                  text-transform: uppercase;
               }
-              .body {
-                  position: relative;
-                  z-index: 1;
-              }
-              table {
-                  width: 100%;
-                  border-collapse: collapse;
+              .participant-name {
                   font-size: 12px;
                   font-weight: bold;
+                  margin: 0 0 2px 0;
+                  text-transform: uppercase;
               }
-              td {
-                  padding: 4px 0;
-                  vertical-align: top;
-              }
-              td:first-child {
-                  width: 110px;
-              }
-              .footer {
-                  display: flex;
-                  justify-content: space-between;
-                  margin-top: 15px;
-                  position: relative;
-                  z-index: 1;
-              }
-              .photo-box {
-                  width: 3cm;
-                  height: 4cm;
-                  border: 1px dashed #000;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
+              .school-name {
                   font-size: 10px;
-                  color: #666;
-                  text-align: center;
+                  font-style: italic;
+                  margin: 0 0 10px 0;
               }
-              .signature {
-                  text-align: center;
-                  font-size: 12px;
+              .divider {
+                  border-top: 1px solid #000;
+                  margin: 5px 0;
+              }
+              .thick-divider {
+                  border-top: 2px solid #000;
+                  margin: 5px 0;
+              }
+              .info-row {
                   display: flex;
-                  flex-direction: column;
                   justify-content: space-between;
-                  padding-top: 10px;
+                  font-size: 10px;
+                  margin: 3px 0;
               }
-              
+              .info-label {
+                  font-style: italic;
+                  text-transform: uppercase;
+              }
+              .info-value {
+                  font-weight: bold;
+              }
+              .info-value-normal {
+                  font-weight: normal;
+              }
+              .print-date {
+                  font-size: 8px;
+                  font-style: italic;
+                  text-align: right;
+                  margin-top: 5px;
+              }
               @media print {
                   body { background: white; padding: 0; }
                   .page { gap: 10px; }
-                  .card { border: 1px solid #000; page-break-inside: avoid; }
+                  .card { page-break-inside: avoid; }
               }
           </style>
       </head>
@@ -784,36 +766,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
       content += `<div class="page">`;
       
       filteredUsers.forEach((u, index) => {
-          if (cardsCount > 0 && cardsCount % 6 === 0) {
+          if (cardsCount > 0 && cardsCount % 9 === 0) {
               content += `</div><div class="page">`;
           }
           
           content += `
           <div class="card">
-              <div class="header">
-                  <img src="${settings.schoolLogoUrl}" class="logo" alt="Logo">
-                  <div class="title-container">
-                      <h2>KARTU PESERTA UJIAN</h2>
-                      <h3>${appName}</h3>
-                  </div>
+              <img src="${settings.schoolLogoUrl}" class="logo" alt="Logo">
+              <div class="app-name">${appName}</div>
+              <div class="black-bar">KARTU PESERTA UJIAN</div>
+              <div class="participant-name">${u.name}</div>
+              <div class="school-name">${u.school || '-'}</div>
+              
+              <div class="divider"></div>
+              <div class="info-row">
+                  <span class="info-label">USERNAME</span>
+                  <span class="info-value">${u.nomorPeserta}</span>
               </div>
-              <div class="body">
-                  <table>
-                      <tr><td>Nama Peserta</td><td>: ${u.name}</td></tr>
-                      <tr><td>Nomor Peserta</td><td>: ${u.nomorPeserta}</td></tr>
-                      <tr><td>Password</td><td>: ${u.password || '12345'}</td></tr>
-                      <tr><td>Sekolah</td><td>: ${u.school}</td></tr>
-                      <tr><td>Ruang / Sesi</td><td>: ${u.room || '-'} / ${u.session || '-'}</td></tr>
-                  </table>
+              <div class="info-row">
+                  <span class="info-label">PASSWORD</span>
+                  <span class="info-value">${u.password || '12345'}</span>
               </div>
-              <div class="footer">
-                  <div class="photo-box">Pas Foto<br>3x4</div>
-                  <div class="signature">
-                      <p>Panitia Ujian,</p>
-                      <br><br><br>
-                      <p>___________________</p>
-                  </div>
+              
+              <div class="divider"></div>
+              <div class="info-row">
+                  <span class="info-label">RUANG</span>
+                  <span class="info-value-normal">${u.room || '-'}</span>
               </div>
+              <div class="info-row">
+                  <span class="info-label">SESI</span>
+                  <span class="info-value-normal">${u.session || '-'}</span>
+              </div>
+              <div class="info-row">
+                  <span class="info-label">NO. PC</span>
+                  <span class="info-value-normal">-</span>
+              </div>
+              
+              <div class="thick-divider"></div>
+              <div class="print-date">dicetak ${printDateStr}</div>
           </div>
           `;
           cardsCount++;
