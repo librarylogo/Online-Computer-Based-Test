@@ -74,9 +74,6 @@ interface AdminDashboardProps {
   settings: AppSettings;
 }
 
-// Fixed Logo for Card Printing
-const FIXED_LOGO_URL = "https://lh3.googleusercontent.com/d/1OtRkYlUrTr89sYj1Wj1hwTO7NjWXoLPf?authuser=0";
-
 // --- ROBUST CSV PARSER ---
 const quillModules = {
     toolbar: [
@@ -289,7 +286,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
 
   const [monitoringSearch, setMonitoringSearch] = useState<string>('');
   const [printDate, setPrintDate] = useState(localTodayStr); // YYYY-MM-DD
-  const [cardModel, setCardModel] = useState<'MODEL_1' | 'MODEL_2'>('MODEL_1');
   
   // GRAPH FILTERS
   const [graphFilterMode, setGraphFilterMode] = useState<'SCHEDULED' | 'ALL'>('SCHEDULED');
@@ -4166,13 +4162,6 @@ ANS: B`;
                               </select>
                           </div>
                           <div>
-                              <label className="block text-xs font-bold text-gray-500 mb-1">Model Kartu</label>
-                              <select className="border rounded p-1.5 text-sm w-48" value={cardModel} onChange={e => setCardModel(e.target.value as any)}>
-                                  <option value="MODEL_1">Model 1 (Standar)</option>
-                                  <option value="MODEL_2">Model 2 (Minimalis)</option>
-                              </select>
-                          </div>
-                          <div>
                               <label className="block text-xs font-bold text-gray-500 mb-1">Tanggal Cetak</label>
                               <input type="date" className="border rounded p-1.5 text-sm" value={printDate} onChange={e => setPrintDate(e.target.value)}/>
                           </div>
@@ -4186,130 +4175,38 @@ ANS: B`;
                   <div id="printable-area">
                     <div className="print-grid">
                         {getMonitoringUsers(cardSchoolFilter).map(u => (
-                            <div key={u.id} className="card-container bg-white relative flex overflow-hidden">
+                            <div key={u.id} className="card-container bg-white relative flex flex-col overflow-hidden">
+                                <div className="text-center">
+                                    <img src={settings.schoolLogoUrl} className="h-10 object-contain mb-1 mx-auto" alt="Logo"/>
+                                    <div className="text-[12px] font-bold uppercase m-0 mb-1 text-center" dangerouslySetInnerHTML={{__html: appName.replace(/\n/g, '<br>')}}></div>
+                                    <div className="bg-black text-white text-[10px] font-bold py-1 mb-2 uppercase text-center w-full">KARTU PESERTA UJIAN</div>
+                                </div>
+                                <div className="text-[12px] font-bold m-0 mb-0.5 uppercase text-center">{u.name}</div>
+                                <div className="text-[10px] italic m-0 mb-2 text-center">{u.school || '-'}</div>
                                 
-                                {/* Watermark Background */}
-                                <div className="absolute inset-0 opacity-5 flex items-center justify-center pointer-events-none z-0">
-                                     <img src={FIXED_LOGO_URL} className="w-32 h-32 object-contain grayscale" />
+                                <div className="border-t border-black my-1"></div>
+                                <div className="flex justify-between items-center text-[10px] my-0.5">
+                                    <span className="italic uppercase">USERNAME</span>
+                                    <span className="font-bold text-[14px]">{u.nomorPeserta || u.username}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] my-0.5">
+                                    <span className="italic uppercase">PASSWORD</span>
+                                    <span className="font-bold text-[14px]">{u.password || '12345'}</span>
                                 </div>
                                 
-                                <div className="z-10 flex w-full h-full relative">
-                                    {cardModel === 'MODEL_1' ? (
-                                        <>
-                                            {/* Left Column: Logo & Photo & Signature */}
-                                            <div className="w-[30%] border-r-2 border-dashed border-gray-400 flex flex-col items-center justify-between p-2 text-center bg-gray-50/30">
-                                                <div className="mt-1">
-                                                    <img src={FIXED_LOGO_URL} className="w-10 h-10 object-contain mix-blend-multiply" alt="Logo"/>
-                                                </div>
-                                                
-                                                <div className="w-full flex-1 flex flex-col items-center justify-center my-1">
-                                                    <div className="w-[20mm] h-[25mm] border border-gray-400 bg-white flex items-center justify-center shadow-inner">
-                                                        <span className="text-[8px] text-gray-300 font-bold transform -rotate-12 whitespace-nowrap">FOTO 3x4</span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="mb-1 w-full border-t border-gray-400 pt-1">
-                                                    <div className="h-4"></div> {/* Space for signature */}
-                                                    <p className="text-[7px] font-bold text-gray-500 uppercase">Tanda Tangan</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Right Column: Details */}
-                                            <div className="flex-1 p-2 flex flex-col justify-between">
-                                                {/* Header */}
-                                                <div className="border-b-2 border-gray-800 pb-1 mb-1">
-                                                    <h2 className="font-black text-sm text-gray-900 leading-none mb-0.5 uppercase">KARTU PESERTA</h2>
-                                                    <p className="text-[8px] font-bold text-gray-600 tracking-widest uppercase">{appName || 'ONLINE BASED TEST'}</p>
-                                                </div>
-
-                                                {/* Info Table */}
-                                                <div className="flex-1 space-y-0.5 text-[9px] text-gray-900 font-medium mt-0.5">
-                                                    <div className="flex items-start">
-                                                        <span className="w-14 font-bold text-gray-500">NAMA</span>
-                                                        <span className="font-bold uppercase flex-1 leading-tight truncate">: {u.name}</span>
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                        <span className="w-14 font-bold text-gray-500">Nomor Peserta</span>
-                                                        <span className="font-mono font-bold">: {u.nomorPeserta || u.username}</span>
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                        <span className="w-14 font-bold text-gray-500">KELAS</span>
-                                                        <span className="font-bold">: {u.class || '-'}</span>
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                        <span className="w-14 font-bold text-gray-500">PASS</span>
-                                                        <span className="font-mono font-bold bg-gray-100 px-1 border border-gray-200 rounded">: {u.password}</span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="w-14 font-bold text-gray-500">SEKOLAH</span>
-                                                        <span className="flex-1 truncate leading-tight">: {u.school || '-'}</span>
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                        <span className="w-14 font-bold text-gray-500">SESI</span>
-                                                        <span>: {u.mappings?.[0]?.session ? `${u.mappings[0].session.replace('Sesi ', '')} (${sessionTimes[u.mappings[0].session] || '-'})` : '-'}</span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Footer */}
-                                                <div className="mt-1 pt-1 border-t border-gray-200 flex justify-between items-end">
-                                                    <div className="text-[7px] text-gray-400 italic max-w-[100px] leading-tight">
-                                                        *Bawa kartu saat ujian.
-                                                    </div>
-                                                    <div className="text-center min-w-[80px]">
-                                                        <p className="text-[7px] text-gray-600 mb-2 leading-none">
-                                                            Pasuruan, {new Date(printDate).toLocaleDateString('id-ID', { month: 'short', year: 'numeric', day: 'numeric' })}
-                                                        </p>
-                                                        <p className="text-[7px] font-bold underline">Panitia Pelaksana</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="flex flex-col w-full h-full border-2 border-blue-800 bg-white">
-                                            <div className="bg-blue-800 text-white p-2 flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <img src={FIXED_LOGO_URL} className="w-6 h-6 object-contain bg-white rounded-full p-0.5" alt="Logo"/>
-                                                    <div>
-                                                        <h2 className="font-black text-[10px] leading-none uppercase">KARTU PESERTA</h2>
-                                                        <p className="text-[6px] tracking-widest uppercase opacity-80">{appName || 'ONLINE BASED TEST'}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex-1 p-2 flex gap-2">
-                                                <div className="flex-1 space-y-1 text-[9px] text-gray-900 font-medium">
-                                                    <div className="flex items-start">
-                                                        <span className="w-16 font-bold text-gray-600">NAMA</span>
-                                                        <span className="font-bold uppercase flex-1 leading-tight truncate">: {u.name}</span>
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                        <span className="w-16 font-bold text-gray-600">NO. PESERTA</span>
-                                                        <span className="font-mono font-bold">: {u.nomorPeserta || u.username}</span>
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                        <span className="w-16 font-bold text-gray-600">PASSWORD</span>
-                                                        <span className="font-mono font-bold bg-gray-100 px-1 border border-gray-200 rounded">: {u.password}</span>
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                        <span className="w-16 font-bold text-gray-600">KELAS/SESI</span>
-                                                        <span className="font-bold">: {u.class || '-'} / {u.mappings?.[0]?.session ? u.mappings[0].session.replace('Sesi ', '') : '-'}</span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="w-16 font-bold text-gray-600">SEKOLAH</span>
-                                                        <span className="flex-1 truncate leading-tight">: {u.school || '-'}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="w-[20mm] flex flex-col items-center justify-between">
-                                                    <div className="w-[20mm] h-[25mm] border border-gray-400 bg-gray-50 flex items-center justify-center shadow-inner">
-                                                        <span className="text-[8px] text-gray-400 font-bold transform -rotate-12 whitespace-nowrap">FOTO</span>
-                                                    </div>
-                                                    <div className="w-full text-center mt-1">
-                                                        <p className="text-[6px] text-gray-600 leading-none mb-3">Panitia</p>
-                                                        <div className="border-b border-gray-400 w-full"></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
+                                <div className="border-t border-black my-1"></div>
+                                <div className="flex justify-between text-[10px] my-0.5">
+                                    <span className="italic uppercase">RUANG</span>
+                                    <span className="font-bold">{u.room || '-'}</span>
+                                </div>
+                                <div className="flex justify-between text-[10px] my-0.5">
+                                    <span className="italic uppercase">SESI</span>
+                                    <span className="font-bold">{u.mappings?.[0]?.session ? u.mappings[0].session.replace('Sesi ', '') : '-'}</span>
+                                </div>
+                                
+                                <div className="border-t-2 border-black my-1 mt-auto"></div>
+                                <div className="text-[8px] italic text-right mt-1">
+                                    dicetak {new Date(printDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                 </div>
                             </div>
                         ))}
