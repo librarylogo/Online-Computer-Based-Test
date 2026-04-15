@@ -5,9 +5,8 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { Exam, ExamResult, User, Question, AppSettings } from '../types';
 import { playAlertSound } from '../utils/sound';
-import { Timer, ChevronRight, ChevronLeft, Grid3X3, Trophy, CheckCircle, ShieldAlert, ZoomIn, X, Maximize2, Clock } from 'lucide-react';
+import { Timer, ChevronRight, ChevronLeft, Grid3X3, CheckCircle, ShieldAlert, ZoomIn, X, Maximize2, Clock } from 'lucide-react';
 import { db } from '../services/database'; // SWITCHED TO REAL DB
-import { Confetti } from './Confetti';
 // @ts-ignore
 import renderMathInElement from 'katex/dist/contrib/auto-render';
 
@@ -118,15 +117,6 @@ const processQuestionsWithShuffledOptions = (questions: Question[], seedBase?: s
     });
 };
 
-// Motivations based on score percentage
-const getMotivation = (score: number, maxScore: number, studentName: string) => {
-    const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
-    if (percentage === 100) return `Luar biasa, ${studentName}! Nilai Sempurna! Pertahankan prestasimu!`;
-    if (percentage >= 80) return `Hebat, ${studentName}! Hasil yang sangat memuaskan.`;
-    if (percentage >= 60) return `Bagus, ${studentName}! Teruslah belajar untuk hasil yang lebih baik lagi.`;
-    return `Jangan menyerah, ${studentName}! Kegagalan adalah awal dari kesuksesan. Ayo belajar lebih giat!`;
-};
-
 export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComplete, appName, themeColor, settings }) => {
   // PERSISTENCE LOGIC
   const timeKey = `das_time_${user.id}_${exam.id}`;
@@ -212,10 +202,6 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
      const saved = localStorage.getItem(cheatKey);
      return saved ? parseInt(saved, 10) : 0;
   });
-  const [showScoreModal, setShowScoreModal] = useState(false);
-  const [finalScore, setFinalScore] = useState(0);
-  const [maxPossibleScore, setMaxPossibleScore] = useState(0);
-  
   // UI State
   const [showQuestionListModal, setShowQuestionListModal] = useState(false);
   const [showConfirmFinishModal, setShowConfirmFinishModal] = useState(false);
@@ -355,10 +341,6 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
   }, [scrollKey]);
 
   useEffect(() => {
-    // Calculate max possible score once
-    const max = activeQuestions.reduce((acc, q) => acc + (q.points || 0), 0);
-    setMaxPossibleScore(max);
-
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         const nextTime = prev - 1;
@@ -457,7 +439,7 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
       window.removeEventListener('blur', handleBlur);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [cheatingAttempts, settings.antiCheat, isFrozen, showScoreModal]);
+  }, [cheatingAttempts, settings.antiCheat, isFrozen]);
 
   // Render Math when question changes
   useEffect(() => {
@@ -498,8 +480,8 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
   }, [currentQuestionIndex, activeQuestions]);
 
   const triggerCheatingAlert = () => {
-    // Only alert if exam is active (score modal not shown) and not already frozen
-    if (showScoreModal || isFrozen) return;
+    // Only alert if exam is active and not already frozen
+    if (isFrozen) return;
 
     if (settings.antiCheat.enableSound) {
         playAlertSound();
@@ -615,7 +597,6 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
     
     try {
         const score = calculateScore();
-        setFinalScore(score);
         
         // Clear persistence on finish
         localStorage.removeItem(timeKey);
@@ -688,7 +669,7 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
 
         await db.submitResult(result);
         setShowConfirmFinishModal(false);
-        setShowScoreModal(true);
+        onComplete();
     } catch (error: any) {
         console.error("Failed to submit exam:", error);
         alert(`Gagal menyimpan jawaban: ${error.message || 'Terjadi kesalahan'}. Silakan coba lagi.`);
@@ -987,40 +968,6 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
                   <Clock size={48} className="mb-3 animate-pulse text-white drop-shadow-md" />
                   <h2 className="text-2xl font-bold mb-1 leading-tight">{timeAlert.title}</h2>
                   <p className="font-medium text-orange-100 text-sm uppercase tracking-wider">{timeAlert.subtitle}</p>
-              </div>
-          </div>
-      )}
-
-      {/* Score Popup Modal */}
-      {showScoreModal && (
-          <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-500">
-              
-              {/* Confetti Effect */}
-              <Confetti />
-
-              <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-300 border-4 border-white ring-8 ring-blue-500/20 relative z-50">
-                  <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner animate-bounce">
-                      <Trophy className="w-12 h-12 text-yellow-600" />
-                  </div>
-                  <h2 className="text-3xl font-extrabold text-gray-800 mb-2">Ujian Selesai!</h2>
-                  
-                  {/* Motivational Quote */}
-                  <p className="text-gray-600 mb-6 italic text-sm">
-                      "{getMotivation(finalScore, maxPossibleScore, user.name)}"
-                  </p>
-                  
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 mb-8 border border-blue-200 shadow-inner">
-                      <p className="text-xs font-bold uppercase tracking-wider text-blue-500">Nilai Perolehan</p>
-                      <p className="text-6xl font-extrabold mt-2 text-blue-700">{finalScore}</p>
-                  </div>
-
-                  <button 
-                    onClick={onComplete}
-                    className="w-full text-white font-bold py-3.5 rounded-xl shadow-lg transition transform hover:-translate-y-1 hover:shadow-xl active:scale-95"
-                    style={{ backgroundColor: themeColor }}
-                  >
-                      Lanjut ke Mata Pelajaran Lain
-                  </button>
               </div>
           </div>
       )}
