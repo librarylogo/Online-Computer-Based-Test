@@ -8,7 +8,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   themeColor: '#2459a9',
   gradientEndColor: '#60a5fa',
   logoStyle: 'circle',
-  schoolLogoUrl: 'https://lh3.googleusercontent.com/d/1tQPCSlVqJv08xNKeZRZhtRKC8T8PF-Uj',
+  schoolLogoUrl: 'https://lh3.googleusercontent.com/d/1tQPCSlVqJv08xNKeZRZhtRKC8T8PF-Uj?authuser=0',
   antiCheat: {
     isActive: true,
     freezeDurationSeconds: 15,
@@ -42,8 +42,8 @@ export const db = {
       if (data && data.school_access) {
         const parsed = typeof data.school_access === 'string' ? JSON.parse(data.school_access) : data.school_access;
         // Force update old logo to new logo
-        if (parsed.schoolLogoUrl === 'https://lh3.googleusercontent.com/d/1OtRkYlUrTr89sYj1Wj1hwTO7NjWXoLPf?authuser=0' || parsed.schoolLogoUrl === 'https://lh3.googleusercontent.com/d/1UXDrhKgeSjfFks_oXIMOVYgxFG_Bh1nm') {
-            parsed.schoolLogoUrl = 'https://lh3.googleusercontent.com/d/1tQPCSlVqJv08xNKeZRZhtRKC8T8PF-Uj';
+        if (parsed.schoolLogoUrl === 'https://lh3.googleusercontent.com/d/1OtRkYlUrTr89sYj1Wj1hwTO7NjWXoLPf?authuser=0' || parsed.schoolLogoUrl === 'https://lh3.googleusercontent.com/d/1UXDrhKgeSjfFks_oXIMOVYgxFG_Bh1nm' || parsed.schoolLogoUrl === 'https://lh3.googleusercontent.com/d/1tQPCSlVqJv08xNKeZRZhtRKC8T8PF-Uj') {
+            parsed.schoolLogoUrl = 'https://lh3.googleusercontent.com/d/1tQPCSlVqJv08xNKeZRZhtRKC8T8PF-Uj?authuser=0';
         }
         // Merge with defaults to ensure all fields exist
         return { ...DEFAULT_SETTINGS, ...parsed };
@@ -57,8 +57,8 @@ export const db = {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.schoolLogoUrl === 'https://lh3.googleusercontent.com/d/1OtRkYlUrTr89sYj1Wj1hwTO7NjWXoLPf?authuser=0' || parsed.schoolLogoUrl === 'https://lh3.googleusercontent.com/d/1UXDrhKgeSjfFks_oXIMOVYgxFG_Bh1nm') {
-            parsed.schoolLogoUrl = 'https://lh3.googleusercontent.com/d/1tQPCSlVqJv08xNKeZRZhtRKC8T8PF-Uj';
+        if (parsed.schoolLogoUrl === 'https://lh3.googleusercontent.com/d/1OtRkYlUrTr89sYj1Wj1hwTO7NjWXoLPf?authuser=0' || parsed.schoolLogoUrl === 'https://lh3.googleusercontent.com/d/1UXDrhKgeSjfFks_oXIMOVYgxFG_Bh1nm' || parsed.schoolLogoUrl === 'https://lh3.googleusercontent.com/d/1tQPCSlVqJv08xNKeZRZhtRKC8T8PF-Uj') {
+            parsed.schoolLogoUrl = 'https://lh3.googleusercontent.com/d/1tQPCSlVqJv08xNKeZRZhtRKC8T8PF-Uj?authuser=0';
         }
         return { ...DEFAULT_SETTINGS, ...parsed };
       } catch (e) {

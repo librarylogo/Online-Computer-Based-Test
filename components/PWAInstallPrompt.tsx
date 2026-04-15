@@ -6,6 +6,10 @@ export const PWAInstallPrompt: React.FC = () => {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
+        // Only show on mobile devices
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+        if (!isMobile) return;
+
         const handler = (e: Event) => {
             e.preventDefault();
             setDeferredPrompt(e);

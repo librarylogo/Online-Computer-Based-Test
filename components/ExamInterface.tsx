@@ -360,6 +360,11 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
     };
   }, [exam.id, questionsKey]);
 
+  useEffect(() => {
+    // Scroll to top when question changes
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentQuestionIndex]);
+
   // Scroll Position Persistence
   useEffect(() => {
     const handleScroll = () => {

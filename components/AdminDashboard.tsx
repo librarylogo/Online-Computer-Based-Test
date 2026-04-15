@@ -773,7 +773,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
           content += `
           <div class="card">
               <img src="${settings.schoolLogoUrl}" class="logo" alt="Logo">
-              <div class="app-name">${appName}</div>
+              <div class="app-name">${appName.replace(/\n/g, '<br>')}</div>
               <div class="black-bar">KARTU PESERTA UJIAN</div>
               <div class="participant-name">${u.name}</div>
               <div class="school-name">${u.school || '-'}</div>
@@ -4538,13 +4538,14 @@ ANS: B`;
                               <p className="text-xs text-blue-600">Ganti nama aplikasi di header.</p>
                           </div>
                           <div className="flex-1">
-                              <input 
-                                  type="text" 
-                                  className="border border-blue-300 rounded-lg px-4 py-2.5 text-sm w-full focus:ring-2 focus:ring-blue-500 outline-none bg-white font-bold text-blue-900 shadow-sm"
+                              <textarea 
+                                  className="border border-blue-300 rounded-lg px-4 py-2.5 text-sm w-full focus:ring-2 focus:ring-blue-500 outline-none bg-white font-bold text-blue-900 shadow-sm resize-none"
                                   defaultValue={settings.appName}
                                   onBlur={(e) => handleAppNameChange(e.target.value)}
                                   placeholder="Masukkan Judul Kegiatan"
-                              />
+                                  rows={3}
+                              ></textarea>
+                              <p className="text-[10px] text-blue-600 mt-1">Gunakan Enter untuk baris baru pada cetak kartu.</p>
                           </div>
                       </div>
                   </div>
