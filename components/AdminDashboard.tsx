@@ -4175,38 +4175,44 @@ ANS: B`;
                   <div id="printable-area">
                     <div className="print-grid">
                         {getMonitoringUsers(cardSchoolFilter).map(u => (
-                            <div key={u.id} className="card-container bg-white relative flex flex-col overflow-hidden">
-                                <div className="text-center">
-                                    <img src={settings.schoolLogoUrl} className="h-10 object-contain mb-1 mx-auto" alt="Logo"/>
-                                    <div className="text-[12px] font-bold uppercase m-0 mb-1 text-center" dangerouslySetInnerHTML={{__html: appName.replace(/\n/g, '<br>')}}></div>
-                                    <div className="bg-black text-white text-[10px] font-bold py-1 mb-2 uppercase text-center w-full">KARTU PESERTA UJIAN</div>
-                                </div>
-                                <div className="text-[12px] font-bold m-0 mb-0.5 uppercase text-center">{u.name}</div>
-                                <div className="text-[10px] italic m-0 mb-2 text-center">{u.school || '-'}</div>
-                                
-                                <div className="border-t border-black my-1"></div>
-                                <div className="flex justify-between items-center text-[10px] my-0.5">
-                                    <span className="italic uppercase">USERNAME</span>
-                                    <span className="font-bold text-[14px]">{u.nomorPeserta || u.username}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-[10px] my-0.5">
-                                    <span className="italic uppercase">PASSWORD</span>
-                                    <span className="font-bold text-[14px]">{u.password || '12345'}</span>
+                            <div key={u.id} className="card-container bg-white relative flex flex-col overflow-hidden rounded-xl border-2 border-gray-800 shadow-sm">
+                                <div className="text-center bg-gray-50 pb-2 pt-2 border-b-2 border-gray-800">
+                                    <img src={settings.schoolLogoUrl} className="h-10 object-contain mb-1 mx-auto drop-shadow-sm" alt="Logo"/>
+                                    <div className="text-[11px] font-extrabold uppercase m-0 mb-1 text-center tracking-wide text-gray-900" dangerouslySetInnerHTML={{__html: appName.replace(/\n/g, '<br>')}}></div>
+                                    <div className="inline-block bg-gray-800 text-white text-[9px] font-bold px-4 py-1 rounded-full mt-1 tracking-widest uppercase">KARTU PESERTA</div>
                                 </div>
                                 
-                                <div className="border-t border-black my-1"></div>
-                                <div className="flex justify-between text-[10px] my-0.5">
-                                    <span className="italic uppercase">RUANG</span>
-                                    <span className="font-bold">{u.room || '-'}</span>
-                                </div>
-                                <div className="flex justify-between text-[10px] my-0.5">
-                                    <span className="italic uppercase">SESI</span>
-                                    <span className="font-bold">{u.mappings?.[0]?.session ? u.mappings[0].session.replace('Sesi ', '') : '-'}</span>
+                                <div className="p-3 flex-1 flex flex-col">
+                                    <div className="text-center mb-3">
+                                        <div className="text-[13px] font-black m-0 uppercase text-gray-900 leading-tight">{u.name}</div>
+                                        <div className="text-[10px] font-semibold text-gray-600 mt-0.5 uppercase tracking-wider">Kelas: {u.class || '-'}</div>
+                                    </div>
+                                    
+                                    <div className="bg-gray-50 rounded-lg p-2 border border-gray-200 mb-2">
+                                        <div className="flex justify-between items-center text-[10px] mb-1">
+                                            <span className="font-semibold text-gray-500 uppercase tracking-wider">Username</span>
+                                            <span className="font-black text-[14px] text-gray-900 tracking-wider">{u.nomorPeserta || u.username}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[10px]">
+                                            <span className="font-semibold text-gray-500 uppercase tracking-wider">Password</span>
+                                            <span className="font-black text-[14px] text-gray-900 tracking-wider">{u.password || '12345'}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex justify-between text-[10px] px-1 mt-auto">
+                                        <div className="flex flex-col">
+                                            <span className="font-semibold text-gray-500 uppercase text-[8px] tracking-wider">Ruang</span>
+                                            <span className="font-bold text-gray-900">{u.room || '-'}</span>
+                                        </div>
+                                        <div className="flex flex-col text-right">
+                                            <span className="font-semibold text-gray-500 uppercase text-[8px] tracking-wider">Sesi</span>
+                                            <span className="font-bold text-gray-900">{u.mappings?.[0]?.session ? u.mappings[0].session.replace('Sesi ', '') : '-'}</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 
-                                <div className="border-t-2 border-black my-1 mt-auto"></div>
-                                <div className="text-[8px] italic text-right mt-1">
-                                    dicetak {new Date(printDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                                <div className="bg-gray-800 text-white text-[7px] italic text-center py-1 font-medium tracking-wider">
+                                    Dicetak: {new Date(printDate).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
                                 </div>
                             </div>
                         ))}

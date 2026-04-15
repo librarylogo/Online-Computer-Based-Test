@@ -1056,7 +1056,7 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
 
       {/* Header Style - KEMDIKBUD LOGO */}
       <header className="text-white shadow-md z-10 sticky top-0" style={{ backgroundColor: themeColor }}>
-        <div className="w-full px-[1.5cm] py-3 flex justify-between items-center">
+        <div className="w-full px-4 md:px-[1.5cm] py-3 flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <div className="bg-white p-1 rounded-full">
               <img 
@@ -1065,9 +1065,9 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
                 alt="Logo Kemdikbud"
               />
             </div>
-            <div>
-              <h1 className="font-bold text-lg leading-tight">{appName}</h1>
-              <p className="text-xs text-blue-100">Online Based Test</p>
+            <div className="min-w-0 flex-1">
+              <h1 className="font-bold text-base md:text-lg leading-tight truncate whitespace-nowrap">{appName}</h1>
+              <p className="text-[10px] md:text-xs text-blue-100 truncate">Online Based Test</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -1083,11 +1083,15 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
       </header>
 
       {/* Toolbar */}
-      <div className="bg-white border-b px-[1.5cm] py-2 flex justify-between items-center w-full sticky top-[60px] z-10">
-          <div className="flex items-center space-x-4">
-              <span className="font-bold text-gray-700">Soal nomor {currentQuestionIndex + 1}</span>
-              <div className="flex items-center space-x-2 text-gray-500 text-sm border-l pl-4">
-                  <span>Ukuran font:</span>
+      <div className="bg-white border-b px-4 md:px-[1.5cm] py-2 flex justify-between items-center w-full sticky top-[60px] z-10">
+          <div className="flex items-center space-x-2 md:space-x-4">
+              <span className="font-bold text-gray-700 text-sm md:text-base">
+                  <span className="hidden md:inline">Soal nomor</span>
+                  <span className="md:hidden">Nomor</span> {currentQuestionIndex + 1}
+              </span>
+              <div className="flex items-center space-x-1 md:space-x-2 text-gray-500 text-xs md:text-sm border-l pl-2 md:pl-4">
+                  <span className="hidden md:inline">Ukuran font:</span>
+                  <span className="md:hidden">Font:</span>
                   <button onClick={() => setFontSize('sm')} className={`hover:text-black ${fontSize === 'sm' ? 'text-black font-bold' : ''}`}>A</button>
                   <button onClick={() => setFontSize('base')} className={`hover:text-black text-lg ${fontSize === 'base' ? 'text-black font-bold' : ''}`}>A</button>
                   <button onClick={() => setFontSize('lg')} className={`hover:text-black text-xl ${fontSize === 'lg' ? 'text-black font-bold' : ''}`}>A</button>
@@ -1104,9 +1108,9 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
       </div>
 
       {/* Main Content Split */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden w-full p-0 flex flex-col md:flex-row gap-0 px-[1.5cm]">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden w-full p-0 flex flex-col md:flex-row gap-0 px-0 md:px-[1.5cm]">
         {/* Left: Question (60%) */}
-        <div className="w-full md:w-[60%] bg-white p-6 exam-content border-r border-gray-100 overflow-x-hidden">
+        <div className="w-full md:w-[60%] bg-white p-4 md:p-6 exam-content border-r border-gray-100 overflow-x-hidden">
             {currentQ.imgUrl && currentQ.imgUrl.trim() !== '' && (
                  <div 
                     className="mb-4 max-w-full relative group overflow-hidden rounded-lg cursor-zoom-in"
@@ -1144,28 +1148,28 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
         </div>
 
         {/* Right: Options / Answers (40%) */}
-        <div className="w-full md:w-[40%] exam-content p-6 bg-gray-50/30 overflow-x-hidden">
+        <div className="w-full md:w-[40%] exam-content p-4 md:p-6 bg-gray-50/30 overflow-x-hidden">
             {renderAnswerInput(currentQ)}
         </div>
       </main>
 
       {/* Footer Navigation */}
-      <footer className="bg-white border-t p-4 sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-          <div className="w-full flex justify-between items-center px-[1.5cm]">
+      <footer className="bg-white border-t p-2 md:p-4 sticky bottom-0 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+          <div className="w-full flex justify-between items-center px-2 md:px-[1.5cm] gap-2">
               <button 
                 onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
                 disabled={currentQuestionIndex === 0}
-                className="flex items-center px-4 py-2 bg-btn-danger text-white rounded font-medium hover:bg-red-600 disabled:opacity-50 transition"
+                className="flex items-center justify-center px-2 md:px-4 py-2 bg-btn-danger text-white rounded font-medium hover:bg-red-600 disabled:opacity-50 transition flex-1 md:flex-none text-xs md:text-base"
               >
-                 <ChevronLeft size={20} className="mr-1"/> Soal sebelumnya
+                 <ChevronLeft size={16} className="md:mr-1"/> <span className="hidden md:inline">Soal sebelumnya</span><span className="md:hidden">Sebelumnya</span>
               </button>
 
-              <div className="flex space-x-4">
+              <div className="flex justify-center flex-1 md:flex-none">
                   <button 
                     onClick={toggleDoubt}
-                    className={`flex items-center px-6 py-2 rounded font-medium transition text-black ${markedDoubts[currentQuestionIndex] ? 'bg-yellow-400' : 'bg-btn-warning'}`}
+                    className={`flex items-center justify-center px-2 md:px-6 py-2 rounded font-medium transition text-black w-full md:w-auto text-xs md:text-base ${markedDoubts[currentQuestionIndex] ? 'bg-yellow-400' : 'bg-btn-warning'}`}
                   >
-                      <input type="checkbox" checked={markedDoubts[currentQuestionIndex]} readOnly className="mr-2 w-4 h-4" /> Ragu-ragu
+                      <input type="checkbox" checked={markedDoubts[currentQuestionIndex]} readOnly className="mr-1 md:mr-2 w-3 h-3 md:w-4 md:h-4" /> <span className="hidden md:inline">Ragu-ragu</span><span className="md:hidden">Ragu</span>
                   </button>
               </div>
 
@@ -1180,16 +1184,16 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
                         setShowConfirmFinishModal(true);
                     }}
                     disabled={(settings.antiCheat.antiSubmitEnabled && timeLeft > (settings.antiCheat.antiSubmitTime || 0) * 60) || !canGoNext}
-                    className="flex items-center px-4 py-2 text-white rounded font-medium hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center px-2 md:px-4 py-2 text-white rounded font-medium hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed flex-1 md:flex-none text-xs md:text-base"
                     style={{ backgroundColor: themeColor }}
                    >
                      {settings.antiCheat.antiSubmitEnabled && timeLeft > (settings.antiCheat.antiSubmitTime || 0) * 60 ? (
                          <span className="flex items-center">
-                             <Clock size={16} className="mr-2 animate-pulse" />
-                             Tunggu {formatTime(timeLeft - (settings.antiCheat.antiSubmitTime || 0) * 60)}
+                             <Clock size={14} className="mr-1 md:mr-2 animate-pulse" />
+                             <span className="hidden md:inline">Tunggu</span> {formatTime(timeLeft - (settings.antiCheat.antiSubmitTime || 0) * 60)}
                          </span>
                      ) : (
-                         <>Selesai <ChevronRight size={20} className="ml-1"/></>
+                         <>Selesai <ChevronRight size={16} className="ml-1"/></>
                      )}
                    </button>
               ) : (
@@ -1200,10 +1204,10 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
                         }
                     }}
                     disabled={!canGoNext}
-                    className="flex items-center px-4 py-2 text-white rounded font-medium hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center px-2 md:px-4 py-2 text-white rounded font-medium hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed flex-1 md:flex-none text-xs md:text-base"
                     style={{ backgroundColor: themeColor }}
                   >
-                     Soal berikutnya <ChevronRight size={20} className="ml-1"/>
+                     <span className="hidden md:inline">Soal berikutnya</span><span className="md:hidden">Berikutnya</span> <ChevronRight size={16} className="ml-1"/>
                   </button>
               )}
           </div>
