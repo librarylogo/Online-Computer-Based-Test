@@ -286,6 +286,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
 
   const [monitoringSearch, setMonitoringSearch] = useState<string>('');
   const [printDate, setPrintDate] = useState(localTodayStr); // YYYY-MM-DD
+  const [cardModel, setCardModel] = useState<'MODEL_1' | 'MODEL_2' | 'MODEL_3' | 'MODEL_4'>('MODEL_1');
   
   // GRAPH FILTERS
   const [graphFilterMode, setGraphFilterMode] = useState<'SCHEDULED' | 'ALL'>('SCHEDULED');
@@ -4165,6 +4166,15 @@ ANS: B`;
                               <label className="block text-xs font-bold text-gray-500 mb-1">Tanggal Cetak</label>
                               <input type="date" className="border rounded p-1.5 text-sm" value={printDate} onChange={e => setPrintDate(e.target.value)}/>
                           </div>
+                          <div>
+                              <label className="block text-xs font-bold text-gray-500 mb-1">Desain Kartu</label>
+                              <select className="border rounded p-1.5 text-sm w-48" value={cardModel} onChange={e => setCardModel(e.target.value as any)}>
+                                  <option value="MODEL_1">Desain 1 (Elegan)</option>
+                                  <option value="MODEL_2">Desain 2 (Klasik Formal)</option>
+                                  <option value="MODEL_3">Desain 3 (Modern Aksen)</option>
+                                  <option value="MODEL_4">Desain 4 (ID Card Vertikal)</option>
+                              </select>
+                          </div>
                           <button onClick={() => window.print()} className="bg-blue-600 text-white px-4 py-2 rounded font-bold text-sm flex items-center hover:bg-blue-700 h-full mt-4 md:mt-0 shadow-lg transform active:scale-95 transition-all">
                               <Download size={16} className="mr-2"/> Download PDF / Cetak
                           </button>
@@ -4175,46 +4185,147 @@ ANS: B`;
                   <div id="printable-area">
                     <div className="print-grid">
                         {getMonitoringUsers(cardSchoolFilter).map(u => (
-                            <div key={u.id} className="card-container bg-white relative flex flex-col overflow-hidden rounded-xl border-2 border-gray-800 shadow-sm">
-                                <div className="text-center bg-gray-50 pb-2 pt-2 border-b-2 border-gray-800">
-                                    <img src={settings.schoolLogoUrl} className="h-10 object-contain mb-1 mx-auto drop-shadow-sm" alt="Logo"/>
-                                    <div className="text-[11px] font-extrabold uppercase m-0 mb-1 text-center tracking-wide text-gray-900" dangerouslySetInnerHTML={{__html: appName.replace(/\n/g, '<br>')}}></div>
-                                    <div className="inline-block bg-gray-800 text-white text-[9px] font-bold px-4 py-1 rounded-full mt-1 tracking-widest uppercase">KARTU PESERTA</div>
-                                </div>
-                                
-                                <div className="p-3 flex-1 flex flex-col">
-                                    <div className="text-center mb-3">
-                                        <div className="text-[13px] font-black m-0 uppercase text-gray-900 leading-tight">{u.name}</div>
-                                        <div className="text-[10px] font-semibold text-gray-600 mt-0.5 uppercase tracking-wider">Kelas: {u.class || '-'}</div>
+                            <React.Fragment key={u.id}>
+                                {cardModel === 'MODEL_1' && (
+                                    <div className="card-container bg-white relative flex flex-col overflow-hidden rounded-xl border-2 border-gray-800 shadow-sm">
+                                        <div className="text-center bg-gray-50 pb-2 pt-2 border-b-2 border-gray-800">
+                                            <img src={settings.schoolLogoUrl} className="h-10 object-contain mb-1 mx-auto drop-shadow-sm" alt="Logo"/>
+                                            <div className="text-[11px] font-extrabold uppercase m-0 mb-1 text-center tracking-wide text-gray-900" dangerouslySetInnerHTML={{__html: appName.replace(/\n/g, '<br>')}}></div>
+                                            <div className="inline-block bg-gray-800 text-white text-[9px] font-bold px-4 py-1 rounded-full mt-1 tracking-widest uppercase">KARTU PESERTA</div>
+                                        </div>
+                                        
+                                        <div className="p-3 flex-1 flex flex-col">
+                                            <div className="text-center mb-3">
+                                                <div className="text-[13px] font-black m-0 uppercase text-gray-900 leading-tight">{u.name}</div>
+                                                <div className="text-[10px] font-semibold text-gray-600 mt-0.5 uppercase tracking-wider">Kelas: {u.class || '-'}</div>
+                                            </div>
+                                            
+                                            <div className="bg-gray-50 rounded-lg p-2 border border-gray-200 mb-2">
+                                                <div className="flex justify-between items-center text-[10px] mb-1">
+                                                    <span className="font-semibold text-gray-500 uppercase tracking-wider">Username</span>
+                                                    <span className="font-black text-[14px] text-gray-900 tracking-wider">{u.nomorPeserta || u.username}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-[10px]">
+                                                    <span className="font-semibold text-gray-500 uppercase tracking-wider">Password</span>
+                                                    <span className="font-black text-[14px] text-gray-900 tracking-wider">{u.password || '12345'}</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="flex justify-between text-[10px] px-1 mt-auto">
+                                                <div className="flex flex-col">
+                                                    <span className="font-semibold text-gray-500 uppercase text-[8px] tracking-wider">Ruang</span>
+                                                    <span className="font-bold text-gray-900">{u.room || '-'}</span>
+                                                </div>
+                                                <div className="flex flex-col text-right">
+                                                    <span className="font-semibold text-gray-500 uppercase text-[8px] tracking-wider">Sesi</span>
+                                                    <span className="font-bold text-gray-900">{u.mappings?.[0]?.session ? u.mappings[0].session.replace('Sesi ', '') : '-'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="bg-gray-800 text-white text-[7px] italic text-center py-1 font-medium tracking-wider">
+                                            Dicetak: {new Date(printDate).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                        </div>
                                     </div>
-                                    
-                                    <div className="bg-gray-50 rounded-lg p-2 border border-gray-200 mb-2">
-                                        <div className="flex justify-between items-center text-[10px] mb-1">
-                                            <span className="font-semibold text-gray-500 uppercase tracking-wider">Username</span>
-                                            <span className="font-black text-[14px] text-gray-900 tracking-wider">{u.nomorPeserta || u.username}</span>
+                                )}
+
+                                {cardModel === 'MODEL_2' && (
+                                    <div className="card-container bg-white relative flex flex-col overflow-hidden border border-black p-3">
+                                        <div className="flex items-center border-b-2 border-black pb-2 mb-2">
+                                            <img src={settings.schoolLogoUrl} className="h-12 w-12 object-contain mr-3" alt="Logo"/>
+                                            <div className="flex-1 text-center">
+                                                <div className="text-[10px] font-bold uppercase" dangerouslySetInnerHTML={{__html: appName.replace(/\n/g, '<br>')}}></div>
+                                                <div className="text-[12px] font-black uppercase mt-1 tracking-widest">KARTU PESERTA</div>
+                                            </div>
                                         </div>
-                                        <div className="flex justify-between items-center text-[10px]">
-                                            <span className="font-semibold text-gray-500 uppercase tracking-wider">Password</span>
-                                            <span className="font-black text-[14px] text-gray-900 tracking-wider">{u.password || '12345'}</span>
+                                        <div className="flex-1 text-[10px]">
+                                            <table className="w-full">
+                                                <tbody>
+                                                    <tr><td className="w-16 font-bold py-0.5">NAMA</td><td>: <span className="font-bold uppercase">{u.name}</span></td></tr>
+                                                    <tr><td className="font-bold py-0.5">KELAS</td><td>: {u.class || '-'}</td></tr>
+                                                    <tr><td className="font-bold py-0.5">USERNAME</td><td>: <span className="font-bold text-[12px]">{u.nomorPeserta || u.username}</span></td></tr>
+                                                    <tr><td className="font-bold py-0.5">PASSWORD</td><td>: <span className="font-bold text-[12px]">{u.password || '12345'}</span></td></tr>
+                                                    <tr><td className="font-bold py-0.5">RUANG</td><td>: {u.room || '-'}</td></tr>
+                                                    <tr><td className="font-bold py-0.5">SESI</td><td>: {u.mappings?.[0]?.session ? u.mappings[0].session.replace('Sesi ', '') : '-'}</td></tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div className="text-[8px] text-right mt-2 pt-1 border-t border-dashed border-gray-400">
+                                            Dicetak: {new Date(printDate).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
                                         </div>
                                     </div>
-                                    
-                                    <div className="flex justify-between text-[10px] px-1 mt-auto">
-                                        <div className="flex flex-col">
-                                            <span className="font-semibold text-gray-500 uppercase text-[8px] tracking-wider">Ruang</span>
-                                            <span className="font-bold text-gray-900">{u.room || '-'}</span>
+                                )}
+
+                                {cardModel === 'MODEL_3' && (
+                                    <div className="card-container bg-white relative flex flex-col overflow-hidden border border-gray-300 shadow-sm border-l-[8px] border-l-blue-600 rounded-r-lg p-3">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <div className="text-[9px] font-bold text-blue-800 uppercase tracking-wider">KARTU PESERTA</div>
+                                                <div className="text-[10px] font-black uppercase leading-tight mt-0.5" dangerouslySetInnerHTML={{__html: appName.replace(/\n/g, '<br>')}}></div>
+                                            </div>
+                                            <img src={settings.schoolLogoUrl} className="h-10 w-10 object-contain" alt="Logo"/>
                                         </div>
-                                        <div className="flex flex-col text-right">
-                                            <span className="font-semibold text-gray-500 uppercase text-[8px] tracking-wider">Sesi</span>
-                                            <span className="font-bold text-gray-900">{u.mappings?.[0]?.session ? u.mappings[0].session.replace('Sesi ', '') : '-'}</span>
+                                        <div className="bg-blue-50 p-2 rounded mb-2">
+                                            <div className="text-[12px] font-black uppercase text-blue-900">{u.name}</div>
+                                            <div className="text-[9px] font-semibold text-blue-700 uppercase">Kelas: {u.class || '-'}</div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 text-[9px] mb-2 flex-1">
+                                            <div>
+                                                <div className="text-gray-500 uppercase text-[7px] font-bold">Username</div>
+                                                <div className="font-black text-[12px]">{u.nomorPeserta || u.username}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-gray-500 uppercase text-[7px] font-bold">Password</div>
+                                                <div className="font-black text-[12px]">{u.password || '12345'}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-gray-500 uppercase text-[7px] font-bold">Ruang</div>
+                                                <div className="font-bold">{u.room || '-'}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-gray-500 uppercase text-[7px] font-bold">Sesi</div>
+                                                <div className="font-bold">{u.mappings?.[0]?.session ? u.mappings[0].session.replace('Sesi ', '') : '-'}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-[7px] text-gray-400 text-right mt-auto">
+                                            Dicetak: {new Date(printDate).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
                                         </div>
                                     </div>
-                                </div>
-                                
-                                <div className="bg-gray-800 text-white text-[7px] italic text-center py-1 font-medium tracking-wider">
-                                    Dicetak: {new Date(printDate).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
-                                </div>
-                            </div>
+                                )}
+
+                                {cardModel === 'MODEL_4' && (
+                                    <div className="card-container bg-white relative flex overflow-hidden border border-gray-400 rounded-lg p-0">
+                                        <div className="w-1/3 bg-gray-800 text-white flex flex-col items-center justify-center p-2 text-center">
+                                            <img src={settings.schoolLogoUrl} className="h-12 w-12 object-contain mb-2 bg-white rounded-full p-1" alt="Logo"/>
+                                            <div className="text-[8px] font-bold uppercase tracking-widest mb-1">KARTU PESERTA</div>
+                                            <div className="text-[7px] opacity-80 uppercase leading-tight" dangerouslySetInnerHTML={{__html: appName.replace(/\n/g, '<br>')}}></div>
+                                        </div>
+                                        <div className="w-2/3 p-3 flex flex-col justify-between bg-gray-50">
+                                            <div>
+                                                <div className="text-[11px] font-black uppercase text-gray-900 leading-tight">{u.name}</div>
+                                                <div className="text-[9px] font-bold text-gray-600 mb-2">Kelas: {u.class || '-'}</div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="flex justify-between items-center border-b border-gray-200 pb-1">
+                                                    <span className="text-[8px] font-bold text-gray-500 uppercase">User</span>
+                                                    <span className="font-black text-[12px] text-gray-900">{u.nomorPeserta || u.username}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center border-b border-gray-200 pb-1">
+                                                    <span className="text-[8px] font-bold text-gray-500 uppercase">Pass</span>
+                                                    <span className="font-black text-[12px] text-gray-900">{u.password || '12345'}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-[9px]">
+                                                    <span className="font-bold text-gray-700">R: {u.room || '-'}</span>
+                                                    <span className="font-bold text-gray-700">S: {u.mappings?.[0]?.session ? u.mappings[0].session.replace('Sesi ', '') : '-'}</span>
+                                                </div>
+                                            </div>
+                                            <div className="text-[6px] text-gray-400 text-right mt-2">
+                                                Dicetak: {new Date(printDate).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </React.Fragment>
                         ))}
                     </div>
                   </div>
