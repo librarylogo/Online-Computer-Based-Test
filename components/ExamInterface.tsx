@@ -329,39 +329,10 @@ export const ExamInterface: React.FC<ExamInterfaceProps> = ({ user, exam, onComp
       localStorage.setItem(freezeTimeKey, freezeTimeLeft.toString());
   }, [freezeTimeLeft, freezeTimeKey]);
 
-  // Real-time Question Updates (Accommodate fixes during test)
+  // Real-time Question Updates removed to save egress quota. 
+  // If admin fixes a question, student needs to refresh the page.
+  // Scroll to top when question changes
   useEffect(() => {
-    const channel = db.subscribeToQuestions(exam.id, (updatedQ) => {
-      setActiveQuestions(prev => {
-        const index = prev.findIndex(q => q.id === updatedQ.id);
-        if (index === -1) return prev;
-        
-        const newQuestions = [...prev];
-        const oldQ = prev[index];
-        
-        // Update the question content while trying to preserve shuffle state if possible
-        newQuestions[index] = {
-            ...oldQ, // Keep current shuffled state
-            text: updatedQ.text,
-            imgUrl: updatedQ.imgUrl,
-            points: updatedQ.points,
-            // If options changed, we might have a problem with current answers.
-            // But usually "fixing" means fixing text or a typo in an option.
-            options: (updatedQ.options || []).length === (oldQ.options || []).length ? oldQ.options : updatedQ.options,
-        };
-        
-        localStorage.setItem(questionsKey, JSON.stringify(newQuestions));
-        return newQuestions;
-      });
-    });
-    
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [exam.id, questionsKey]);
-
-  useEffect(() => {
-    // Scroll to top when question changes
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentQuestionIndex]);
 

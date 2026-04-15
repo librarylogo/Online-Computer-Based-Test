@@ -410,6 +410,58 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
     }
   }, [activeTab, viewingQuestionsExam, isPreviewOpen, isAddQuestionModalOpen]);
 
+  const refreshMonitoringData = async () => {
+      try {
+          const { students, results: lightweightResults } = await db.getLightweightMonitoringData();
+          
+          setUsers(prevUsers => {
+              return prevUsers.map(u => {
+                  const updatedStudent = students.find((s: any) => s.id === u.id);
+                  if (updatedStudent) {
+                      return { ...u, status: updatedStudent.status, is_login: updatedStudent.is_login };
+                  }
+                  return u;
+              });
+          });
+
+          setResults(prevResults => {
+              // We need to update existing results or add new ones, but keep answers if they exist in prev
+              const newResults = [...prevResults];
+              lightweightResults.forEach((lr: any) => {
+                  const existingIndex = newResults.findIndex(r => r.id === lr.id);
+                  if (existingIndex >= 0) {
+                      newResults[existingIndex] = {
+                          ...newResults[existingIndex],
+                          score: Number(lr.score),
+                          status: lr.status,
+                          cheatingAttempts: lr.violation_count || 0,
+                          submittedAt: lr.finish_time
+                      };
+                  } else {
+                      // If it's a completely new result, we might not have studentName/examTitle easily available
+                      // But usually they are added during loadData. If needed, we can just push it.
+                      // For monitoring, we mainly care about updates.
+                      newResults.push({
+                          id: lr.id,
+                          studentId: lr.siswa_id,
+                          studentName: 'Unknown', // Will be fixed on full load
+                          examId: lr.exam_id,
+                          examTitle: 'Unknown',
+                          score: Number(lr.score),
+                          submittedAt: lr.finish_time,
+                          totalQuestions: 0,
+                          cheatingAttempts: lr.violation_count || 0,
+                          status: lr.status
+                      });
+                  }
+              });
+              return newResults;
+          });
+      } catch (err) {
+          console.error("Error refreshing monitoring data:", err);
+      }
+  };
+
   useEffect(() => {
     loadData();
     
@@ -417,8 +469,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
     let interval: any;
     if (activeTab === 'MONITORING' || activeTab === 'ANTI_CHEAT') {
         interval = setInterval(() => {
-            loadData();
-        }, 5000); // Every 5 seconds
+            refreshMonitoringData();
+        }, 10000); // Increased to 10 seconds to save egress
     }
     
     return () => {

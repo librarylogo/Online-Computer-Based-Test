@@ -458,6 +458,17 @@ export const db = {
     await supabase.from('students').update({ status: 'finished' }).eq('id', result.studentId);
   },
 
+  getLightweightMonitoringData: async () => {
+    // Only fetch fields that change during an exam to save egress
+    const { data: students } = await supabase.from('students').select('id, status, is_login');
+    const { data: results } = await supabase.from('results').select('id, siswa_id, exam_id, score, status, violation_count, finish_time');
+    
+    return {
+        students: students || [],
+        results: results || []
+    };
+  },
+
   getAllResults: async (): Promise<ExamResult[]> => {
     // 1. Fetch Results
     const { data: results, error } = await supabase
