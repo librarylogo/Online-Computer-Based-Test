@@ -289,7 +289,7 @@ const App: React.FC = () => {
               
               <div className="flex justify-center mb-6">
                   <img 
-                      src="https://lh3.googleusercontent.com/d/1tQPCSlVqJv08xNKeZRZhtRKC8T8PF-Uj?authuser=0" 
+                      src={settings.schoolLogoUrl || "https://lh3.googleusercontent.com/d/1tQPCSlVqJv08xNKeZRZhtRKC8T8PF-Uj?authuser=0"} 
                       className="w-40 h-auto object-contain animate-float-slow filter drop-shadow-xl" 
                       alt="Logo Online Based Test" 
                       referrerPolicy="no-referrer"

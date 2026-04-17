@@ -933,6 +933,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout, 
       onSettingsChange();
   };
 
+  const handleLogoUrlChange = async (newUrl: string) => {
+      await db.updateSettings({ schoolLogoUrl: newUrl });
+      onSettingsChange();
+  };
+
+  const handleThemeColorChange = async (newColor: string) => {
+      await db.updateSettings({ themeColor: newColor });
+      onSettingsChange();
+  };
+
+  const handleGradientColorChange = async (newColor: string) => {
+      await db.updateSettings({ gradientEndColor: newColor });
+      onSettingsChange();
+  };
+
   const handleCreateRoomProktor = async () => {
     if (!newRoomName.trim() || !newRoomSchool.trim()) {
       showToast('Nama sekolah dan Nama ruang harus diisi!', 'error');
@@ -4656,20 +4671,73 @@ ANS: B`;
                   {/* Judul Kegiatan Section */}
                   <div className="bg-white rounded-xl shadow-sm border p-6">
                       <h3 className="font-bold text-lg mb-4 flex items-center"><Settings size={20} className="mr-2 text-blue-600"/> Pengaturan Umum</h3>
-                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex flex-col md:flex-row md:items-center gap-6">
-                          <div className="min-w-[200px]">
-                              <label className="block text-sm font-bold text-blue-800 mb-1">Judul Kegiatan</label>
-                              <p className="text-xs text-blue-600">Ganti nama aplikasi di header.</p>
+                      <div className="space-y-4">
+                          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex flex-col md:flex-row md:items-center gap-6">
+                              <div className="min-w-[200px]">
+                                  <label className="block text-sm font-bold text-blue-800 mb-1">Judul Kegiatan</label>
+                                  <p className="text-xs text-blue-600">Ganti nama aplikasi di header.</p>
+                              </div>
+                              <div className="flex-1">
+                                  <textarea 
+                                      className="border border-blue-300 rounded-lg px-4 py-2.5 text-sm w-full focus:ring-2 focus:ring-blue-500 outline-none bg-white font-bold text-blue-900 shadow-sm resize-none"
+                                      defaultValue={settings.appName}
+                                      onBlur={(e) => handleAppNameChange(e.target.value)}
+                                      placeholder="Masukkan Judul Kegiatan"
+                                      rows={3}
+                                  ></textarea>
+                                  <p className="text-[10px] text-blue-600 mt-1">Gunakan Enter untuk baris baru pada cetak kartu.</p>
+                              </div>
                           </div>
-                          <div className="flex-1">
-                              <textarea 
-                                  className="border border-blue-300 rounded-lg px-4 py-2.5 text-sm w-full focus:ring-2 focus:ring-blue-500 outline-none bg-white font-bold text-blue-900 shadow-sm resize-none"
-                                  defaultValue={settings.appName}
-                                  onBlur={(e) => handleAppNameChange(e.target.value)}
-                                  placeholder="Masukkan Judul Kegiatan"
-                                  rows={3}
-                              ></textarea>
-                              <p className="text-[10px] text-blue-600 mt-1">Gunakan Enter untuk baris baru pada cetak kartu.</p>
+                          
+                          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex flex-col md:flex-row md:items-center gap-6">
+                              <div className="min-w-[200px]">
+                                  <label className="block text-sm font-bold text-blue-800 mb-1">URL Logo Sekolah</label>
+                                  <p className="text-xs text-blue-600">Ganti logo pada halaman login dan kartu peserta.</p>
+                              </div>
+                              <div className="flex-1">
+                                  <input 
+                                      type="text"
+                                      className="border border-blue-300 rounded-lg px-4 py-2.5 text-sm w-full focus:ring-2 focus:ring-blue-500 outline-none bg-white font-bold text-blue-900 shadow-sm"
+                                      defaultValue={settings.schoolLogoUrl || ''}
+                                      onBlur={(e) => handleLogoUrlChange(e.target.value)}
+                                      placeholder="Masukkan URL Logo (contoh: https://...)"
+                                  />
+                                  <p className="text-[10px] text-blue-600 mt-1">Pastikan URL gambar valid dan dapat diakses publik.</p>
+                              </div>
+                          </div>
+                          
+                          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 flex flex-col md:flex-row md:items-center gap-6">
+                              <div className="min-w-[200px]">
+                                  <label className="block text-sm font-bold text-blue-800 mb-1">Tema Warna Aplikasi</label>
+                                  <p className="text-xs text-blue-600">Ganti warna utama dan gradien background aplikasi.</p>
+                              </div>
+                              <div className="flex-1 flex flex-col md:flex-row gap-4">
+                                  <div className="flex items-center gap-3">
+                                      <input 
+                                          type="color"
+                                          className="h-10 w-16 p-1 border border-blue-300 rounded cursor-pointer bg-white"
+                                          defaultValue={settings.themeColor || '#2459a9'}
+                                          onBlur={(e) => handleThemeColorChange(e.target.value)}
+                                      />
+                                      <div className="flex flex-col">
+                                          <span className="text-xs font-bold text-gray-700">Warna Utama</span>
+                                          <span className="text-[10px] text-gray-500">Mempengaruhi sidebar dan header</span>
+                                      </div>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-3">
+                                      <input 
+                                          type="color"
+                                          className="h-10 w-16 p-1 border border-blue-300 rounded cursor-pointer bg-white"
+                                          defaultValue={settings.gradientEndColor || '#60a5fa'}
+                                          onBlur={(e) => handleGradientColorChange(e.target.value)}
+                                      />
+                                      <div className="flex flex-col">
+                                          <span className="text-xs font-bold text-gray-700">Warna Gradien</span>
+                                          <span className="text-[10px] text-gray-500">Mempengaruhi gradasi halaman login</span>
+                                      </div>
+                                  </div>
+                              </div>
                           </div>
                       </div>
                   </div>
